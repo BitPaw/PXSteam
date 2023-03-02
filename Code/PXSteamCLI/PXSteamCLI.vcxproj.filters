@@ -18,9 +18,15 @@
     <ClInclude Include="Source\Steam.hpp">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="Source\SteamFriendSearchFilter.hpp">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Steam.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SteamFriendSearchFilter.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>

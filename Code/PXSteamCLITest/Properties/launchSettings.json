@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PXSteamCLITest": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

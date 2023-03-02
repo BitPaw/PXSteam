@@ -2,8 +2,41 @@
 
 #include "../../PXSteam/Source/PXSteam.h"
 
+#include "SteamFriendSearchFilter.hpp"
+
 namespace PX
 {
+	public enum class SteamUserActiveState
+	{
+		Invalid,
+		Offline,			// friend is not currently logged on
+		Online,			// friend is logged on
+		Busy,			// user is on, but busy
+		Away,			// auto-away feature
+		Snooze,			// auto-away for a long time
+		LookingToTrade,	// Online, trading
+		LookingToPlay,	// Online, wanting to play
+		Invisible		// Online, but appears offline to friends.  This status is never published to clients.
+	};
+
+	public enum class SteamFriendshipStatus
+	{
+		Invalid
+	};
+
+	public ref class SteamUser
+	{
+		public:
+		PXSteamUserID ID;
+		unsigned int Level;
+		System::String^ NameProfile;
+		System::String^ NameNick;
+		SteamFriendshipStatus Friendship;
+		SteamUserActiveState State;
+
+		SteamUser() {};
+	};
+
 	public ref class Stream
 	{
 		private:
@@ -29,12 +62,12 @@ namespace PX
 			public:
 		}
 
-		property System::String^ ProfileName
-		{
-			System::String^ get();
-		}
+		property System::String^ ProfileName { System::String^ get(); }
+		property unsigned int ProfileLevel { unsigned int get(); }
 
 		bool Initialize();
 		void Shutdown();
+
+		System::Collections::Generic::List<SteamUser^>^ FriendsFetch(SteamFriendSearchFilter^ fiendSearchFilter);
 	};
 }

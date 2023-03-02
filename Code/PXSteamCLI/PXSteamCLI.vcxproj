@@ -160,9 +160,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Steam.hpp" />
+    <ClInclude Include="Source\SteamFriendSearchFilter.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Steam.cpp" />
+    <ClCompile Include="Source\SteamFriendSearchFilter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PXSteam\PXSteam.vcxproj">

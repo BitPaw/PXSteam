@@ -1,4 +1,6 @@
-﻿using System;
+﻿using PX;
+using System;
+using System.Collections.Generic;
 
 namespace PXSteamCLITest
 {
@@ -26,6 +28,15 @@ namespace PXSteamCLITest
                     }
 
                     Console.WriteLine("User deteced: " + stream.ProfileName);
+
+
+                    PX.SteamFriendSearchFilter steamFriendSearchFilter = new PX.SteamFriendSearchFilter(true);   
+                    List<SteamUser> firends = stream.FriendsFetch(steamFriendSearchFilter);
+
+                    foreach (SteamUser user in firends)
+                    {
+                        Console.WriteLine(user.NameProfile +  "[" + user.ID + "]");
+                    }
                 }
 
                 stream.Dispose();

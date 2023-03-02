@@ -20,6 +20,7 @@ extern "C"
 {
 #endif
 
+	typedef unsigned char PXSteamBool;
 	typedef __int64 PXSteamUserID;
 
 	typedef enum PXSteamState_
@@ -90,22 +91,26 @@ extern "C"
 	void PXSteamConstruct(PXSteam* const pxSteam);
 	void PXSteamDestruct(PXSteam* const pxSteam);
 
-	bool PXSteamInitialize(PXSteam* const pxSteam);
+	PXSteamBool PXSteamInitialize(PXSteam* const pxSteam);
 	void PXSteamShutdown(PXSteam* const pxSteam);
+	//-------------------------------------------------------------------------
 
-
+	//-------------------------------------------------------------------------
 	PXSteamUserActiveState PXSteamProfileStateFromID(const unsigned char stateID);
 	PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateID);
+	//-------------------------------------------------------------------------
 
-	// Profile - you
 
-
+	//---<Profile - you>-------------------------------------------------------
 	// Get your profilename, formatted in UTF-8. Guranteed not to be null.
-	unsigned char PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const exportBuffer, const unsigned int exportBufferSize, unsigned int* writtenSize); // Written size?
+	PXSteamBool PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const exportBuffer, const unsigned int exportBufferSize, unsigned int* writtenSize); // Written size?
 
-	unsigned char PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inputBuffer, const unsigned int inputBufferSize);
+	PXSteamBool PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inputBuffer, const unsigned int inputBufferSize);
+
+	unsigned int PXSteamProfileLevel(PXSteam* const pxSteam);
 
 	PXSteamUserActiveState PXSteamProfileState(PXSteam* const pxSteam);
+	//-------------------------------------------------------------------------
 
 
 	//---<Friends>---------------------

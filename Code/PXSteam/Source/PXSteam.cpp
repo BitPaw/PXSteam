@@ -15,7 +15,7 @@ void PXSteamDestruct(PXSteam* const pxSteam)
 {
 }
 
-bool PXSteamInitialize(PXSteam* const pxSteam)
+PXSteamBool PXSteamInitialize(PXSteam* const pxSteam)
 {
 	// Create file "steam_appid.txt" with ID "480" as the content. Needed for init.
 	// This file is for debuggin only and is forbidden in release builds.
@@ -103,7 +103,7 @@ PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateI
 	}
 }
 
-unsigned char PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const exportBuffer, const unsigned int exportBufferSize, unsigned int* writtenSize)
+PXSteamBool PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const exportBuffer, const unsigned int exportBufferSize, unsigned int* writtenSize)
 {
 	ISteamFriends* const steamFriends = SteamFriends();
 	const char* const name = steamFriends->GetPersonaName();
@@ -117,13 +117,22 @@ unsigned char PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const export
 	return 	1;
 }
 
-unsigned char PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inputBuffer, const unsigned int inputBufferSize)
+PXSteamBool PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inputBuffer, const unsigned int inputBufferSize)
 {
 	ISteamFriends* const steamFriends = SteamFriends();
 
 	const SteamAPICall_t result = steamFriends->SetPersonaName((char*)inputBuffer);
 
 	return 0;
+}
+
+unsigned int PXSteamProfileLevel(PXSteam* const pxSteam)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+
+	// Missing function to get own level?
+
+	return -1;
 }
 
 PXSteamUserActiveState PXSteamProfileState(PXSteam* const pxSteam)
@@ -174,6 +183,13 @@ unsigned char PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxS
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const char* name = steamFriends->GetFriendPersonaName(steamID);
 
+	if (!name)
+	{
+		return 0;
+	}
+
+	strncpy((char*)outputBuffer, name, outputBufferSize);
+
 	//PXTextCopyA(name, -1, (char*)outputBuffer, outputBufferSize);
 
 	return 0;
@@ -200,6 +216,7 @@ unsigned char PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUser
 	else
 	{
 		//MemoryClear(pxSteamFriendGameInfoList, sizeof(PXSteamFriendGameInfo));
+		memset(pxSteamFriendGameInfoList, 0, sizeof(PXSteamFriendGameInfo));
 		return 0;
 	}
 }
@@ -218,6 +235,13 @@ unsigned char PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID
 	ISteamFriends* const steamFriends = SteamFriends();
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const char* const name = steamFriends->GetPlayerNickname(steamID);
+
+	if (!name)
+	{
+		return 0;
+	}
+
+	strncpy((char*)outputBuffer, name, outputBufferSize);
 
 	//PXTextCopyA(name, -1, (char*)outputBuffer, outputBufferSize);
 
