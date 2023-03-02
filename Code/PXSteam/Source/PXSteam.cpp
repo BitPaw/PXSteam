@@ -1,16 +1,14 @@
 #include "PXSteam.h"
 
-#include <OS/Memory/PXMemory.h>
-#include <Text/PXText.h>
-
 #include <Steam/steam_api.h>
+#include <string.h>
 
 #define PXSteamIDBlockFromID(id) (*(CSteamID*)&id)
 #define PXSteamIDBlockToID(block) (*(__int64*)&block)
 
 void PXSteamConstruct(PXSteam* const pxSteam)
 {
-    MemoryClear(pxSteam, sizeof(PXSteam));
+    //MemoryClear(pxSteam, sizeof(PXSteam));
 }
 
 void PXSteamDestruct(PXSteam* const pxSteam)
@@ -54,7 +52,7 @@ bool PXSteamInitialize(PXSteam* const pxSteam)
 		
 	}
 
-    return false;
+	return true;
 }
 
 void PXSteamShutdown(PXSteam* const pxSteam)
@@ -105,14 +103,18 @@ PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateI
 	}
 }
 
-unsigned char PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const exportBuffer, const unsigned int exportBufferSize)
+unsigned char PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const exportBuffer, const unsigned int exportBufferSize, unsigned int* writtenSize)
 {
 	ISteamFriends* const steamFriends = SteamFriends();
 	const char* const name = steamFriends->GetPersonaName();
 
-	PXTextCopyA(name, -1, (char*)exportBuffer, exportBufferSize);
+	strcpy((char*)exportBuffer, name);;
 
-	return 0;
+	//PXTextCopyA(name, -1, (char*)exportBuffer, exportBufferSize);
+
+	*writtenSize = strlen(name);
+
+	return 	1;
 }
 
 unsigned char PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inputBuffer, const unsigned int inputBufferSize)
@@ -172,7 +174,7 @@ unsigned char PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxS
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const char* name = steamFriends->GetFriendPersonaName(steamID);
 
-	PXTextCopyA(name, -1, (char*)outputBuffer, outputBufferSize);
+	//PXTextCopyA(name, -1, (char*)outputBuffer, outputBufferSize);
 
 	return 0;
 }
@@ -197,7 +199,7 @@ unsigned char PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUser
 	}
 	else
 	{
-		MemoryClear(pxSteamFriendGameInfoList, sizeof(PXSteamFriendGameInfo));
+		//MemoryClear(pxSteamFriendGameInfoList, sizeof(PXSteamFriendGameInfo));
 		return 0;
 	}
 }
@@ -217,7 +219,7 @@ unsigned char PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const char* const name = steamFriends->GetPlayerNickname(steamID);
 
-	PXTextCopyA(name, -1, (char*)outputBuffer, outputBufferSize);
+	//PXTextCopyA(name, -1, (char*)outputBuffer, outputBufferSize);
 
 	return 0;
 }

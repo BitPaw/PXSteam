@@ -1,17 +1,39 @@
 #pragma once
 
-#include "PXSteam.h"
+#include "../../PXSteam/Source/PXSteam.h"
 
 namespace PX
 {
-	class Stream : public PXSteam
+	public ref class Stream
 	{
 		private:
-		unsigned int AppID;
-
-		char Name[32];
+		bool _isInitialized;
+		PXSteam* _pxSteam;
 
 		public:
+		Stream();
+		~Stream();
+
+		// propertys
+		property bool IsInitialized
+		{
+			bool get()
+			{
+				return _isInitialized;
+			}
+			private:
+			void set(bool value)
+			{
+				_isInitialized = value;
+			}
+			public:
+		}
+
+		property System::String^ ProfileName
+		{
+			System::String^ get();
+		}
+
 		bool Initialize();
 		void Shutdown();
 	};

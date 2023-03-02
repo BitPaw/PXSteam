@@ -101,7 +101,7 @@ extern "C"
 
 
 	// Get your profilename, formatted in UTF-8. Guranteed not to be null.
-	unsigned char PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const exportBuffer, const unsigned int exportBufferSize); // Written size?
+	unsigned char PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const exportBuffer, const unsigned int exportBufferSize, unsigned int* writtenSize); // Written size?
 
 	unsigned char PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inputBuffer, const unsigned int inputBufferSize);
 
