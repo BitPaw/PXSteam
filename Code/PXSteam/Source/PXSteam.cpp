@@ -6,9 +6,43 @@
 #define PXSteamIDBlockFromID(id) (*(CSteamID*)&id)
 #define PXSteamIDBlockToID(block) (*(__int64*)&block)
 
+
+unsigned int PXSteamNameCopy(const void* __restrict const source, void* __restrict destination, const unsigned int destinationMaxSize)
+{
+	// Check if call is valid
+	{
+		const unsigned char validCall = source && destination && destinationMaxSize;
+
+		if (!validCall)
+		{
+			return 0;
+		}
+	}
+
+	unsigned int i = 0;
+
+	while ((i < destinationMaxSize) && (((unsigned char*)source)[i] != '\0'))
+	{
+		((unsigned char*)destination)[i] = ((unsigned char*)source)[i];
+		++i;
+	}
+
+	((unsigned char*)destination)[i] = '\0';
+
+	return i;
+}
+
+void PXSteamMemoryClear(void* __restrict const target, const unsigned int targetSize)
+{
+	for (size_t i = 0; i < targetSize; ++i)
+	{
+		((unsigned char*)target)[i] = 0;
+	}
+}
+
 void PXSteamConstruct(PXSteam* const pxSteam)
 {
-    //MemoryClear(pxSteam, sizeof(PXSteam));
+    PXSteamMemoryClear(pxSteam, sizeof(PXSteam));
 }
 
 void PXSteamDestruct(PXSteam* const pxSteam)
@@ -103,16 +137,12 @@ PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateI
 	}
 }
 
-PXSteamBool PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const exportBuffer, const unsigned int exportBufferSize, unsigned int* writtenSize)
+PXSteamBool PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* writtenSize)
 {
 	ISteamFriends* const steamFriends = SteamFriends();
 	const char* const name = steamFriends->GetPersonaName();
 
-	strcpy((char*)exportBuffer, name);;
-
-	//PXTextCopyA(name, -1, (char*)exportBuffer, exportBufferSize);
-
-	*writtenSize = strlen(name);
+	*writtenSize = PXSteamNameCopy(name, outputBuffer, outputBufferSize);
 
 	return 	1;
 }
@@ -177,20 +207,13 @@ PXSteamUserActiveState PXSteamFriendsPersonaState(PXSteam* const pxSteam, const 
 	return pxSteamUserActiveState;
 }
 
-unsigned char PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, const void* outputBuffer, const unsigned int outputBufferSize)
+unsigned char PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize)
 {
 	ISteamFriends* const steamFriends = SteamFriends();
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const char* name = steamFriends->GetFriendPersonaName(steamID);
 
-	if (!name)
-	{
-		return 0;
-	}
-
-	strncpy((char*)outputBuffer, name, outputBufferSize);
-
-	//PXTextCopyA(name, -1, (char*)outputBuffer, outputBufferSize);
+	PXSteamNameCopy(name, outputBuffer, outputBufferSize);
 
 	return 0;
 }
@@ -216,7 +239,7 @@ unsigned char PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUser
 	else
 	{
 		//MemoryClear(pxSteamFriendGameInfoList, sizeof(PXSteamFriendGameInfo));
-		memset(pxSteamFriendGameInfoList, 0, sizeof(PXSteamFriendGameInfo));
+		PXSteamMemoryClear(pxSteamFriendGameInfoList, sizeof(PXSteamFriendGameInfo));
 		return 0;
 	}
 }
@@ -230,22 +253,208 @@ int PXSteamFriendsSteamLevel(PXSteam* const pxSteam, const PXSteamUserID pxSteam
 	return level;
 }
 
-unsigned char PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, const void* outputBuffer, const unsigned int outputBufferSize)
+unsigned char PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize)
 {
 	ISteamFriends* const steamFriends = SteamFriends();
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const char* const name = steamFriends->GetPlayerNickname(steamID);
 
-	if (!name)
-	{
-		return 0;
-	}
-
-	strncpy((char*)outputBuffer, name, outputBufferSize);
-
-	//PXTextCopyA(name, -1, (char*)outputBuffer, outputBufferSize);
+	PXSteamNameCopy(name, outputBuffer, outputBufferSize);
 
 	return 0;
+}
+
+unsigned int PXSteamFriendsGroupCount(PXSteam* const pxSteam)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const int friendsGroupCount = steamFriends->GetFriendsGroupCount();
+
+	return friendsGroupCount;
+}
+
+unsigned short PXSteamFriendsGroupIDByIndex(PXSteam* const pxSteam, const unsigned int index)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamFriendsGroupName(PXSteam* const pxSteam, const PXSteamFriendsGroupID friendsGroupID, void* const outputBuffer, const unsigned int outputBufferSize)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const char* groupName = steamFriends->GetFriendsGroupName(friendsGroupID);
+
+	PXSteamNameCopy(groupName, outputBuffer, outputBufferSize);
+
+	return 1u;
+}
+
+unsigned int PXSteamFriendsGroupMembersCount(PXSteam* const pxSteam, const PXSteamFriendsGroupID friendsGroupID)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	unsigned int number = steamFriends->GetFriendsGroupMembersCount(friendsGroupID);
+
+	return number;
+}
+
+PXSteamBool PXSteamFriendCheck(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iFriendFlags)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const CSteamID steamID = PXSteamIDBlockFromID(steamIDFriend);
+	const bool has = steamFriends->HasFriend(steamID, iFriendFlags);
+
+	return has;
+}
+
+unsigned int PXSteamClanCount(PXSteam* const pxSteam)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const unsigned int count = steamFriends->GetClanCount();
+
+	return count;
+}
+
+PXSteamID PXSteamClanByIndex(PXSteam* const pxSteam, int iClan)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const CSteamID steamID = steamFriends->GetClanByIndex(iClan);
+	const PXSteamID pxSteamID = PXSteamIDBlockToID(steamID);
+
+	return pxSteamID;
+}
+
+PXSteamBool PXSteamClanName(PXSteam* const pxSteam, const PXSteamID pxSteamID, void* const outputBuffer, const unsigned int outputBufferSize)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamID);
+	const char* clanName = steamFriends->GetClanName(steamID);
+
+	PXSteamNameCopy(clanName, outputBuffer, outputBufferSize);
+
+	return 1u;
+}
+
+PXSteamBool PXSteamClanTag(PXSteam* const pxSteam, const PXSteamID pxSteamID, void* const outputBuffer, const unsigned int outputBufferSize)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamID);
+	const char* clanName = steamFriends->GetClanTag(steamID);
+
+	PXSteamNameCopy(clanName, outputBuffer, outputBufferSize);
+
+	return 1u;
+}
+
+PXSteamBool PXSteamClanActivityCounts(PXSteam* const pxSteam, const PXSteamID pxSteamID, int* pnOnline, int* pnInGame, int* pnChatting)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamID);
+
+
+	return 1u;
+}
+
+unsigned int PXSteamFriendCountFromSource(PXSteam* const pxSteam, const PXSteamID steamIDSource)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const CSteamID steamID = PXSteamIDBlockFromID(steamIDSource);
+	const int count = steamFriends->GetFriendCountFromSource(steamID);
+
+	return count;
+}
+
+PXSteamID PXSteamFriendFromSourceByIndex(PXSteam* const pxSteam, const PXSteamID steamIDSource, int iFriend)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const CSteamID steamID = PXSteamIDBlockFromID(steamIDSource);
+	const CSteamID friendID = steamFriends->GetFriendFromSourceByIndex(steamID, iFriend);
+	const PXSteamUserID pxfriendID = PXSteamIDBlockToID(steamID);
+
+	return pxfriendID;
+}
+
+PXSteamBool PXSteamIsUserInSource(PXSteam* const pxSteam, const PXSteamID pxSteamID, const PXSteamID steamIDSource)
+{
+	return 0;
+}
+
+void PXSteamSetInGameVoiceSpeaking(PXSteam* const pxSteam, const PXSteamID pxSteamID, bool bSpeaking)
+{
+}
+
+void PXSteamActivateGameOverlay(PXSteam* const pxSteam, const char* pchDialog)
+{
+}
+
+void PXSteamActivateGameOverlayToUser(PXSteam* const pxSteam, const char* pchDialog, const PXSteamID steamID)
+{
+}
+
+void ActivateGameOverlayToWebPage(PXSteam* const pxSteam, const char* pchURL, EActivateGameOverlayToWebPageMode eMode)
+{
+}
+
+void PXSteamActivateGameOverlayToStore(PXSteam* const pxSteam, AppId_t nAppID, EOverlayToStoreFlag eFlag)
+{
+}
+
+void PXSteamSetPlayedWith(PXSteam* const pxSteam, const PXSteamID pxSteamIDPlayedWith)
+{
+}
+
+void PXSteamActivateGameOverlayInviteDialog(PXSteam* const pxSteam, const PXSteamID steamIDLobby)
+{
+}
+
+int PXSteamGetSmallFriendAvatar(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+{
+	return 0;
+}
+
+int PXSteamGetMediumFriendAvatar(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+{
+	return 0;
+}
+
+int PXSteamGetLargeFriendAvatar(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamRequestUserInformation(PXSteam* const pxSteam, const PXSteamID pxSteamID, const PXSteamBool bRequireNameOnly)
+{
+	return 0;
+}
+
+__int64 PXSteamRequestClanOfficerList(PXSteam* const pxSteam, const PXSteamID pxSteamID)
+{
+	return 0;
+}
+
+const PXSteamID PXSteamGetClanOwner(PXSteam* const pxSteam, const PXSteamID pxSteamID)
+{
+	return PXSteamID();
+}
+
+int PXSteamGetClanOfficerCount(PXSteam* const pxSteam, const PXSteamID pxSteamID)
+{
+	return 0;
+}
+
+const PXSteamID PXSteamGetClanOfficerByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iOfficer)
+{
+	return PXSteamID();
+}
+
+unsigned int PXSteamGetUserRestrictions(PXSteam* const pxSteam)
+{
+	return 0;
+}
+
+unsigned short PXSteamFriendsGroupIDByIndex(const unsigned int index)
+{
+	ISteamFriends* const steamFriends = SteamFriends();
+	const FriendsGroupID_t friendsGroupID = steamFriends->GetFriendsGroupIDByIndex(index);
+
+	return friendsGroupID;
 }
 
 unsigned int PXSteamFriendsFetchList(PXSteam* const pxSteam, const unsigned short searchFlags, PXSteamFriend* const pxSteamFriendList, const unsigned int pxSteamFriendListSize)
@@ -277,4 +486,185 @@ unsigned int PXSteamFriendsFetchList(PXSteam* const pxSteam, const unsigned shor
 	}
 
 	return numberOfResults;
+}
+
+PXSteamBool PXSteamRichPresenceChange(PXSteam* const pxSteam, const char* pchKey, const char* pchValue)
+{
+	return 0;
+}
+
+void PXSteamClearRichPresence(PXSteam* const pxSteam)
+{
+}
+
+PXSteamBool PXSteamFriendRichPresenceFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, const char* pchKey, void* const outputBuffer, const unsigned int outputBufferSize)
+{
+	return 0;
+}
+
+int PXSteamFriendRichPresenceKeyCountFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, void* const outputBuffer, const unsigned int outputBufferSize)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamFriendRichPresenceKeyByIndex(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iKey)
+{
+	return 0;
+}
+
+void PXSteamRequestFriendRichPresence(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+{
+}
+
+PXSteamBool PXSteamUserInviteToGame(PXSteam* const pxSteam, const PXSteamID steamIDFriend, const char* pchConnectString)
+{
+	return 0;
+}
+
+int PXSteamGetCoplayFriendCount(PXSteam* const pxSteam)
+{
+	return 0;
+}
+
+PXSteamID PXSteamGetCoplayFriend(PXSteam* const pxSteam, int iCoplayFriend)
+{
+	return PXSteamID();
+}
+
+int PXSteamGetFriendCoplayTime(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+{
+	return 0;
+}
+
+unsigned int PXSteamGetFriendCoplayGame(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+{
+	return 0;
+}
+
+__int64 PXSteamJoinClanChatRoom(PXSteam* const pxSteam, const PXSteamID pxSteamID)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamLeaveClanChatRoom(PXSteam* const pxSteam, const PXSteamID pxSteamID)
+{
+	return 0;
+}
+
+int PXSteamGetClanChatMemberCount(PXSteam* const pxSteam, const PXSteamID pxSteamID)
+{
+	return 0;
+}
+
+PXSteamID PXSteamGetChatMemberByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iUser)
+{
+	return PXSteamID();
+}
+
+PXSteamBool PXSteamSendClanChatMessage(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, const char* pchText)
+{
+	return 0;
+}
+
+int PXSteamGetClanChatMessage(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, int iMessage, void* prgchText, int cchTextMax, EChatEntryType* peChatEntryType, STEAM_OUT_STRUCT() const PXSteamID* psteamidChatter)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamIsClanChatAdmin(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, const PXSteamID pxSteamID)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamIsClanChatWindowOpenInSteam(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamOpenClanChatWindowInSteam(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamCloseClanChatWindowInSteam(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamSetListenForFriendsMessages(PXSteam* const pxSteam, bool bInterceptEnabled)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamReplyToFriendMessage(PXSteam* const pxSteam, const PXSteamID steamIDFriend, const char* pchMsgToSend)
+{
+	return 0;
+}
+
+int PXSteamGetFriendMessage(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iMessageID, void* pvData, int cubData, EChatEntryType* peChatEntryType)
+{
+	return 0;
+}
+
+__int64 PXSteamGetFollowerCount(PXSteam* const pxSteam, const PXSteamID steamID)
+{
+	return 0;
+}
+
+__int64 PXSteamIsFollowing(PXSteam* const pxSteam, const PXSteamID steamID)
+{
+	return 0;
+}
+
+__int64 PXSteamEnumerateFollowingList(PXSteam* const pxSteam, unsigned int unStartIndex)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamIsClanPublic(PXSteam* const pxSteam, const PXSteamID pxSteamID)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamIsClanOfficialGameGroup(PXSteam* const pxSteam, const PXSteamID pxSteamID)
+{
+	return 0;
+}
+
+int PXSteamGetNumChatsWithUnreadPriorityMessages(PXSteam* const pxSteam)
+{
+	return 0;
+}
+
+void PXSteamActivateGameOverlayRemotePlayTogetherInviteDialog(PXSteam* const pxSteam, const PXSteamID steamIDLobby)
+{
+}
+
+PXSteamBool PXSteamRegisterProtocolInOverlayBrowser(PXSteam* const pxSteam, const char* pchProtocol)
+{
+	return 0;
+}
+
+void PXSteamActivateGameOverlayInviteDialogConnectString(PXSteam* const pxSteam, const char* pchConnectString)
+{
+}
+
+__int64 PXSteamRequestEquippedProfileItems(PXSteam* const pxSteam, const PXSteamID steamID)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamBHasEquippedProfileItem(PXSteam* const pxSteam, const PXSteamID steamID, ECommunityProfileItemType itemType)
+{
+	return 0;
+}
+
+PXSteamBool PXSteamGetProfileItemPropertyString(PXSteam* const pxSteam, const PXSteamID steamID, ECommunityProfileItemType itemType, ECommunityProfileItemProperty prop, void* const outputBuffer, const unsigned int outputBufferSize)
+{
+	return 0;
+}
+
+unsigned int PXSteamGetProfileItemPropertyUint(PXSteam* const pxSteam, const PXSteamID steamID, ECommunityProfileItemType itemType, ECommunityProfileItemProperty prop)
+{
+	return 0;
 }

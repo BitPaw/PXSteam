@@ -35,7 +35,7 @@ namespace PXSteamCLITest
 
                     foreach (SteamUser user in firends)
                     {
-                        Console.WriteLine(user.NameProfile +  "[" + user.ID + "]");
+                        Console.WriteLine(user.NameProfile +  "[" + user.Level + "]");
                     }
                 }
 
