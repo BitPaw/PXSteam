@@ -1,10 +1,8 @@
 #pragma once
 
-#include "PXSteam.h"
-
 namespace PX
 {
-	class Stream : public PXSteam
+	class Steam
 	{
 		private:
 		unsigned int AppID;

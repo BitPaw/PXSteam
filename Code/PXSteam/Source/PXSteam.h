@@ -1,6 +1,7 @@
 #ifndef PXSteamINCLUDE
 #define PXSteamINCLUDE
 
+#define PXSteamPublic __declspec(dllexport)
 
 #define PXSteamFriendFlagNone	0x00
 #define PXSteamFriendFlagBlocked	0x01	// Benutzer, dessen Kontaktaufnahme mit dem aktuellen Benutzer von diesem blockiert wurde.
@@ -24,6 +25,7 @@ extern "C"
 	typedef __int64 PXSteamUserID;
 	typedef __int64 PXSteamID;
 	typedef unsigned short PXSteamFriendsGroupID;
+	typedef int PXSteamImageHandle;
 
 	typedef enum PXSteamState_
 	{
@@ -50,7 +52,15 @@ extern "C"
 
 	typedef enum PXSteamFriendshipStatus_
 	{
-		PXSteamFriendshipStatusInvalid
+		PXSteamFriendshipStatusInvalid,
+		PXSteamFriendRelationshipNone,
+		PXSteamFriendRelationshipBlocked,			// this doesn't get stored; the user has just done an Ignore on an friendship invite
+		PXSteamFriendRelationshipRequestRecipient,
+		PXSteamFriendRelationshipFriend,
+		PXSteamFriendRelationshipRequestInitiator,
+		PXSteamFriendRelationshipIgnored ,			// this is stored; the user has explicit blocked this other user from comments/chat/etc
+		PXSteamFriendRelationshipIgnoredFriend ,
+		PXSteamFriendRelationshipSuggested_DEPRECATED,		// was used by the original implementation of the facebook linking feature, but now unused.
 	}
 	PXSteamFriendshipStatus;
 
@@ -128,6 +138,10 @@ extern "C"
 	{
 		PXSteamState State;
 		unsigned int AppID;
+
+		void* Friends;
+		void* User;
+		void* Utility;
 	}
 	PXSteam;
 
@@ -138,71 +152,86 @@ extern "C"
 		unsigned int GameIP; // 32Bit
 		unsigned short GamePort; // 16Bit
 		unsigned short QueryPort; // 16Bit
-
 	}
 	PXSteamFriendGameInfo;
 
-	typedef struct PXSteamFriend_
+	typedef struct PXSteamUser_
 	{
 		PXSteamUserID ID;
+		PXSteamUserActiveState State;
 		unsigned int Level;
 		char NameProfile[64];
+		unsigned int NameProfileLength;
+	}
+	PXSteamUser;
+
+	typedef struct PXSteamFriend_
+	{
+		PXSteamUser User;
 		char NameNick[64];
+		unsigned int NameNickLength;
 		PXSteamFriendshipStatus Friendship;
-		PXSteamUserActiveState State;
 
 		unsigned char IsInGame;
 		PXSteamFriendGameInfo GameInfo;
 	}
 	PXSteamFriend;
 
+	typedef struct PXSteamAvatar_
+	{
+		unsigned char SideLength;
+		void* Data;
+		unsigned int DataSize;
+	}
+	PXSteamAvatar;
 
 
 
 	//---<Core>--------------------
-	void PXSteamConstruct(PXSteam* const pxSteam);
-	void PXSteamDestruct(PXSteam* const pxSteam);
+	PXSteamPublic void PXSteamConstruct(PXSteam* const pxSteam);
+	PXSteamPublic void PXSteamDestruct(PXSteam* const pxSteam);
 
-	PXSteamBool PXSteamInitialize(PXSteam* const pxSteam);
-	void PXSteamShutdown(PXSteam* const pxSteam);
+	PXSteamPublic PXSteamBool PXSteamInitialize(PXSteam* const pxSteam);
+	PXSteamPublic void PXSteamShutdown(PXSteam* const pxSteam);
 	//-------------------------------------------------------------------------
 
 	void PXSteamMemoryClear(void* __restrict const target, const unsigned int targetSize);
 	unsigned int PXSteamNameCopy(const void* __restrict const source, void* __restrict destination, const unsigned int destinationMaxSize);
 
 	//-------------------------------------------------------------------------
-	PXSteamUserActiveState PXSteamProfileStateFromID(const unsigned char stateID);
-	PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateID);
+	PXSteamPublic PXSteamUserActiveState PXSteamProfileStateFromID(const unsigned char stateID);
+	PXSteamPublic PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateID);
 	//-------------------------------------------------------------------------
 
 
 	//---<Profile - you>-------------------------------------------------------
 	// Get your profilename, formatted in UTF-8. Guranteed not to be null.
-	PXSteamBool PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* writtenSize); // Written size?
+	PXSteamPublic PXSteamBool PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* writtenSize); // Written size?
 
-	PXSteamBool PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inputBuffer, const unsigned int inputBufferSize);
+	PXSteamPublic PXSteamBool PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inputBuffer, const unsigned int inputBufferSize);
 
-	unsigned int PXSteamProfileLevel(PXSteam* const pxSteam);
+	PXSteamPublic unsigned int PXSteamProfileLevel(PXSteam* const pxSteam);
+	PXSteamPublic PXSteamID PXSteamProfileID(PXSteam* const pxSteam);
 
-	PXSteamUserActiveState PXSteamProfileState(PXSteam* const pxSteam);
+	PXSteamPublic PXSteamUserActiveState PXSteamProfileState(PXSteam* const pxSteam);
+
+
+	PXSteamPublic PXSteamBool PXSteamUserFetchMe(PXSteam* const pxSteam, PXSteamUser* const pxSteamUser);
 	//-------------------------------------------------------------------------
 
 
 	//---<Friends>---------------------
-
-
-
-	unsigned int PXSteamFriendsFetch(PXSteam* const pxSteam, const unsigned short searchFlags);
+	PXSteamPublic unsigned int PXSteamFriendsFetch(PXSteam* const pxSteam, const unsigned short searchFlags);
 
 
 
 	PXSteamFriendshipStatus PXSteamFriendsRelationship(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID);
 	PXSteamUserActiveState PXSteamFriendsPersonaState(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID);
 
-	unsigned char PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize);
+	PXSteamBool PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* const outputBufferWritten);
 
 	// returns true if the friend is actually in a game, and fills in pFriendGameInfo with an extra details 
-	unsigned char PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, PXSteamFriendGameInfo* const pxSteamFriendGameInfoList);
+	PXSteamBool PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, PXSteamFriendGameInfo* const pxSteamFriendGameInfoList);
 
 	// accesses old friends names - returns an empty string when their are no more items in the history
 	//const char* PXSteamFriendsPersonaNameHistory(const PXSteamID steamIDFriend, int iPersonaName);
@@ -212,9 +241,20 @@ extern "C"
 
 	// Returns nickname the current user has set for the specified player. Returns NULL if the no nickname has been set for that player.
 	// DEPRECATED: GetPersonaName follows the Steam nickname preferences, so apps shouldn't need to care about nicknames explicitly.
-	unsigned char  PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize);
+	PXSteamBool PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* const outputBufferWritten);
 
 
+	PXSteamBool PXSteamFriendAvatarFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, PXSteamAvatar* const pxSteamAvatar);
+
+	// gets the small (32x32) avatar of the current user, which is a handle to be used in IClientUtils::GetImageRGBA(), or 0 if none set
+	PXSteamImageHandle PXSteamFriendAvatar32(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
+
+	// gets the medium (64x64) avatar of the current user, which is a handle to be used in IClientUtils::GetImageRGBA(), or 0 if none set
+	PXSteamImageHandle PXSteamFriendAvatar64(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
+
+	// gets the large (184x184) avatar of the current user, which is a handle to be used in IClientUtils::GetImageRGBA(), or 0 if none set
+	// returns -1 if this image has yet to be loaded, in this case wait for a AvatarImageLoaded_t callback and then call this again
+	PXSteamImageHandle PXSteamFriendAvatar184(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
 
 
 
@@ -289,22 +329,18 @@ extern "C"
 	// activates game overlay to store page for app
 	void PXSteamActivateGameOverlayToStore(PXSteam* const pxSteam, unsigned int nAppID, PXSteamOverlayToStoreFlag eFlag);
 
-	// Mark a target user as 'played with'. This is a client-side only feature that requires that the calling user is 
-	// in game 
+	// Mark a target user as 'played with'. This is a client-side only feature that requires that the calling user is in game 
 	void PXSteamSetPlayedWith(PXSteam* const pxSteam, const PXSteamID pxSteamIDPlayedWith);
 
 	// activates game overlay to open the invite dialog. Invitations will be sent for the provided lobby.
 	void PXSteamActivateGameOverlayInviteDialog(PXSteam* const pxSteam, const PXSteamID steamIDLobby);
 
-	// gets the small (32x32) avatar of the current user, which is a handle to be used in IClientUtils::GetImageRGBA(), or 0 if none set
-	int PXSteamGetSmallFriendAvatar(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
 
-	// gets the medium (64x64) avatar of the current user, which is a handle to be used in IClientUtils::GetImageRGBA(), or 0 if none set
-	int PXSteamGetMediumFriendAvatar(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
 
-	// gets the large (184x184) avatar of the current user, which is a handle to be used in IClientUtils::GetImageRGBA(), or 0 if none set
-	// returns -1 if this image has yet to be loaded, in this case wait for a AvatarImageLoaded_t callback and then call this again
-	int PXSteamGetLargeFriendAvatar(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
+	
+
+
+
 
 	// requests information about a user - persona name & avatar
 	// if bRequireNameOnly is set, then the avatar of a user isn't downloaded 
@@ -448,7 +484,7 @@ extern "C"
 
 
 	// Custom 
-	unsigned int PXSteamFriendsFetchList(PXSteam* const pxSteam, const unsigned short searchFlags, PXSteamFriend* const pxSteamFriendList, const unsigned int pxSteamFriendListSize);
+	PXSteamPublic unsigned int PXSteamFriendsFetchList(PXSteam* const pxSteam, const unsigned short searchFlags, PXSteamFriend* const pxSteamFriendList, const unsigned int pxSteamFriendListSize);
 	//-------------------------------------------------------------------------
 
 

@@ -7,10 +7,12 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OutputPath></OutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PXSteamCLI\PXSteamCLI.vcxproj" />
+    <ProjectReference Include="..\PXSteamCS\PXSteamCS.csproj" />
+    <ProjectReference Include="..\PXSteam\PXSteam.vcxproj" />
   </ItemGroup>
 
 </Project>

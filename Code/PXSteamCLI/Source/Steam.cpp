@@ -1,52 +1,47 @@
 #include "Steam.hpp"
 
-PX::Stream::Stream()
+PX::Steam::Steam()
 {
 	_pxSteam = new PXSteam();
 	PXSteamConstruct(_pxSteam);
 }
 
-PX::Stream::~Stream()
+PX::Steam::~Steam()
 {
 	PXSteamDestruct(_pxSteam);
 	delete _pxSteam;
 }
 
-System::String^ PX::Stream::ProfileName::get()
+PX::SteamUser^ PX::Steam::ProfileMine::get()
 {
-	if (!_isInitialized)
+	if (_profileMine == nullptr)
 	{
-		return System::String::Empty;
+		_profileMine = gcnew SteamUser();
 	}
 
-	char buffer[64];
-	unsigned int size = 0;
+	PXSteamUser pxSteamUser;
 
-	bool sucess = PXSteamProfileNameFetch(_pxSteam, buffer, 64, &size);
+	const bool isSuccessful = PXSteamUserFetchMe(_pxSteam, &pxSteamUser);
 
-	if (!sucess)
+	if (isSuccessful)
 	{
-		return System::String::Empty;
+		_profileMine->ID = pxSteamUser.ID;
+		_profileMine->State = (SteamUserActiveState)pxSteamUser.State;
+		_profileMine->Level = pxSteamUser.Level;
+		_profileMine->NameProfile = gcnew System::String(pxSteamUser.NameProfile, 0, pxSteamUser.NameProfileLength, System::Text::Encoding::UTF8);
+	}
+	else
+	{
+		_profileMine->ID = 0;
+		_profileMine->State = SteamUserActiveState::Invalid;
+		_profileMine->Level = 0;
+		_profileMine->NameProfile = System::String::Empty;
 	}
 
-	System::String^ cliName = gcnew	System::String(buffer, 0, size);
-
-	return cliName;
+	return _profileMine;
 }
 
-unsigned int PX::Stream::ProfileLevel::get()
-{
-	if (!_isInitialized)
-	{
-		return -1;
-	}
-
-	unsigned int steamLevel = PXSteamProfileLevel(_pxSteam);
-
-	return steamLevel;
-}
-
-bool PX::Stream::Initialize()
+bool PX::Steam::Initialize()
 {
 	const bool result = PXSteamInitialize(_pxSteam);
 
@@ -60,12 +55,12 @@ bool PX::Stream::Initialize()
 	return true;
 }
 
-void PX::Stream::Shutdown()
+void PX::Steam::Shutdown()
 {
 	PXSteamShutdown(_pxSteam);
 }
 
-System::Collections::Generic::List<PX::SteamUser^>^ PX::Stream::FriendsFetch(PX::SteamFriendSearchFilter^ fiendSearchFilter)
+System::Collections::Generic::List<PX::SteamFriend^>^ PX::Steam::FriendsFetch(PX::SteamFriendSearchFilter^ fiendSearchFilter)
 {
 	const unsigned short flags = fiendSearchFilter->FlagID;
 	const unsigned int numberOfTargets = PXSteamFriendsFetch(_pxSteam, flags);
@@ -74,21 +69,37 @@ System::Collections::Generic::List<PX::SteamUser^>^ PX::Stream::FriendsFetch(PX:
 
 	PXSteamFriendsFetchList(_pxSteam, flags, userList, numberOfTargets);
 
-	auto listUser = gcnew System::Collections::Generic::List<SteamUser^>(numberOfTargets);
+	auto listUser = gcnew System::Collections::Generic::List<SteamFriend^>(numberOfTargets);
 	
 	for (size_t i = 0; i < numberOfTargets; ++i)
 	{
-		SteamUser^ user = gcnew SteamUser();
-		PXSteamFriend* pyUser = &userList[i];
+		SteamFriend^ const steamFriend = gcnew SteamFriend();
+		PXSteamFriend* const pxSteamFriend = &userList[i];
 
-		user->ID = pyUser->ID;
-		user->Level = pyUser->Level;
-		user->NameProfile = gcnew System::String(pyUser->NameProfile);
-		user->NameNick = gcnew System::String(pyUser->NameNick);
-		user->Friendship = (SteamFriendshipStatus)pyUser->Friendship;
-		user->State = (SteamUserActiveState)pyUser->State;
+		steamFriend->ID = pxSteamFriend->User.ID;
+		steamFriend->Level = pxSteamFriend->User.Level;
+		steamFriend->Friendship = (SteamFriendshipStatus)pxSteamFriend->Friendship;
+		steamFriend->State = (SteamUserActiveState)pxSteamFriend->User.State;
 
-		listUser->Add(user);
+		if (pxSteamFriend->User.NameProfileLength > 0)
+		{
+			steamFriend->NameProfile = gcnew System::String(pxSteamFriend->User.NameProfile, 0, pxSteamFriend->User.NameProfileLength, System::Text::Encoding::UTF8);
+		}
+		else
+		{
+			steamFriend->NameProfile = System::String::Empty;
+		}
+		
+		if (pxSteamFriend->NameNickLength > 0)
+		{
+			steamFriend->NameNick = gcnew System::String(pxSteamFriend->NameNick, 0, pxSteamFriend->NameNickLength, System::Text::Encoding::UTF8);
+		}
+		else
+		{
+			steamFriend->NameNick = System::String::Empty;
+		}	
+
+		listUser->Add(steamFriend);
 	}
 
 	delete[] userList;

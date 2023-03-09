@@ -11,15 +11,14 @@ namespace PXSteamCLITest
             Console.WriteLine("[C#] PX Steam test starting...");
 
             {
-
                 Console.WriteLine("Creating object..");
 
-                PX.Stream stream = new PX.Stream();
+                PX.Steam steam = new PX.Steam();
 
                 Console.WriteLine("Initialize..");
 
                 {
-                    bool result = stream.Initialize();
+                    bool result = steam.Initialize();
 
                     if (!result)
                     {
@@ -27,19 +26,20 @@ namespace PXSteamCLITest
                         return;
                     }
 
-                    Console.WriteLine("User deteced: " + stream.ProfileName);
+                    Console.WriteLine("User deteced: [" + steam .ProfileMine.State + "][" + steam.ProfileMine.Level + "]" + steam.ProfileMine.NameProfile);
 
+                    SteamUser me = steam.ProfileMyself();
 
                     PX.SteamFriendSearchFilter steamFriendSearchFilter = new PX.SteamFriendSearchFilter(true);   
-                    List<SteamUser> firends = stream.FriendsFetch(steamFriendSearchFilter);
+                    List<SteamFriend> firends = steam.FriendsFetch(steamFriendSearchFilter);
 
                     foreach (SteamUser user in firends)
                     {
-                        Console.WriteLine(user.NameProfile +  "[" + user.Level + "]");
+                        Console.WriteLine("[" + user.State + "][" + user.Level + "] " + user.NameProfile);
                     }
                 }
 
-                stream.Dispose();
+                steam.Dispose();
 
                 Console.WriteLine("Dispose");
             }

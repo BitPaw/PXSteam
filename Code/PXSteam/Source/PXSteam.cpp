@@ -1,6 +1,8 @@
 #include "PXSteam.h"
 
 #include <Steam/steam_api.h>
+#include <Steam/isteamutils.h>
+#include <Steam/isteamuser.h>
 #include <string.h>
 
 #define PXSteamIDBlockFromID(id) (*(CSteamID*)&id)
@@ -81,10 +83,16 @@ PXSteamBool PXSteamInitialize(PXSteam* const pxSteam)
 		}
 	}
 
+	pxSteam->State = PXSteamStateInit;
+
 	// Extended init
 	{
-		
+		pxSteam->Friends = SteamFriends();
+		pxSteam->User = SteamUser();
+		pxSteam->Utility = SteamUtils();
 	}
+
+	pxSteam->State = PXSteamStateLinked;
 
 	return true;
 }
@@ -132,6 +140,30 @@ PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateI
 {
 	switch (stateID)
 	{
+		case k_EFriendRelationshipNone:
+			return PXSteamFriendRelationshipNone;
+
+		case k_EFriendRelationshipBlocked:
+			return PXSteamFriendRelationshipBlocked;
+
+		case k_EFriendRelationshipRequestRecipient:
+			return PXSteamFriendRelationshipRequestRecipient;
+
+		case k_EFriendRelationshipFriend:
+			return PXSteamFriendRelationshipFriend;
+
+		case k_EFriendRelationshipRequestInitiator:
+			return PXSteamFriendRelationshipRequestInitiator;
+
+		case k_EFriendRelationshipIgnored:
+			return PXSteamFriendRelationshipIgnored;
+
+		case k_EFriendRelationshipIgnoredFriend:
+			return PXSteamFriendRelationshipIgnoredFriend;
+
+		case k_EFriendRelationshipSuggested_DEPRECATED:
+			return PXSteamFriendRelationshipSuggested_DEPRECATED;
+
 		default:
 			return PXSteamFriendshipStatusInvalid;
 	}
@@ -139,7 +171,7 @@ PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateI
 
 PXSteamBool PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* writtenSize)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const char* const name = steamFriends->GetPersonaName();
 
 	*writtenSize = PXSteamNameCopy(name, outputBuffer, outputBufferSize);
@@ -149,7 +181,7 @@ PXSteamBool PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const outputBu
 
 PXSteamBool PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inputBuffer, const unsigned int inputBufferSize)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 
 	const SteamAPICall_t result = steamFriends->SetPersonaName((char*)inputBuffer);
 
@@ -158,16 +190,24 @@ PXSteamBool PXSteamProfileNameSet(PXSteam* const pxSteam, const void* const inpu
 
 unsigned int PXSteamProfileLevel(PXSteam* const pxSteam)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamUser* const steamUser = (ISteamUser*)pxSteam->User;
+	const int level = steamUser->GetPlayerSteamLevel();
 
-	// Missing function to get own level?
+	return level;
+}
 
-	return -1;
+PXSteamID PXSteamProfileID(PXSteam* const pxSteam)
+{
+	ISteamUser* const steamUser = (ISteamUser*)pxSteam->User;
+	const CSteamID steamID = steamUser->GetSteamID();
+	const PXSteamID pxSteamID = PXSteamIDBlockToID(steamID);
+
+	return pxSteamID;
 }
 
 PXSteamUserActiveState PXSteamProfileState(PXSteam* const pxSteam)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const EPersonaState state = steamFriends->GetPersonaState();
 	const PXSteamUserActiveState pxSteamUserActiveState = PXSteamProfileStateFromID(state);
 
@@ -176,7 +216,7 @@ PXSteamUserActiveState PXSteamProfileState(PXSteam* const pxSteam)
 
 unsigned int PXSteamFriendsFetch(PXSteam* const pxSteam, const unsigned short searchFlags)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const int numberOfMatches = steamFriends->GetFriendCount(searchFlags);
 
 	if (numberOfMatches == -1)
@@ -189,9 +229,9 @@ unsigned int PXSteamFriendsFetch(PXSteam* const pxSteam, const unsigned short se
 
 PXSteamFriendshipStatus PXSteamFriendsRelationship(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
-	const EFriendRelationship relation = steamFriends->GetFriendRelationship(steamID);	
+	const EFriendRelationship relation = steamFriends->GetFriendRelationship(steamID);
 	const PXSteamFriendshipStatus pxSteamFriendshipStatus = PXSteamFriendshipStatusFromID(relation);
 
 	return pxSteamFriendshipStatus;
@@ -199,7 +239,7 @@ PXSteamFriendshipStatus PXSteamFriendsRelationship(PXSteam* const pxSteam, const
 
 PXSteamUserActiveState PXSteamFriendsPersonaState(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const EPersonaState personaState = steamFriends->GetFriendPersonaState(steamID);
 	const PXSteamUserActiveState pxSteamUserActiveState = PXSteamProfileStateFromID(personaState);
@@ -207,20 +247,20 @@ PXSteamUserActiveState PXSteamFriendsPersonaState(PXSteam* const pxSteam, const 
 	return pxSteamUserActiveState;
 }
 
-unsigned char PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize)
+PXSteamBool PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* const outputBufferWritten)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const char* name = steamFriends->GetFriendPersonaName(steamID);
 
-	PXSteamNameCopy(name, outputBuffer, outputBufferSize);
+	*outputBufferWritten = PXSteamNameCopy(name, outputBuffer, outputBufferSize);
 
-	return 0;
+	return name != nullptr;
 }
 
-unsigned char PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, PXSteamFriendGameInfo* const pxSteamFriendGameInfoList)
+PXSteamBool PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, PXSteamFriendGameInfo* const pxSteamFriendGameInfoList)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 
 	FriendGameInfo_t friendGameInfo_t;
@@ -234,52 +274,54 @@ unsigned char PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUser
 		pxSteamFriendGameInfoList->GameIP = friendGameInfo_t.m_unGameIP;
 		pxSteamFriendGameInfoList->GamePort = friendGameInfo_t.m_usGamePort;
 		pxSteamFriendGameInfoList->QueryPort = friendGameInfo_t.m_usQueryPort;
-		return 1;
 	}
 	else
 	{
-		//MemoryClear(pxSteamFriendGameInfoList, sizeof(PXSteamFriendGameInfo));
 		PXSteamMemoryClear(pxSteamFriendGameInfoList, sizeof(PXSteamFriendGameInfo));
-		return 0;
 	}
+
+	return sucessful;
 }
 
 int PXSteamFriendsSteamLevel(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const int level = steamFriends->GetFriendSteamLevel(steamID);
 
 	return level;
 }
 
-unsigned char PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize)
+PXSteamBool PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* const outputBufferWritten)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamUserID);
 	const char* const name = steamFriends->GetPlayerNickname(steamID);
 
-	PXSteamNameCopy(name, outputBuffer, outputBufferSize);
+	if (name)
+	{
+		*outputBufferWritten = PXSteamNameCopy(name, outputBuffer, outputBufferSize);
+	}
+	else
+	{
+		*outputBufferWritten = 0;
+		PXSteamMemoryClear(outputBuffer, outputBufferSize);
+	}
 
 	return 0;
 }
 
 unsigned int PXSteamFriendsGroupCount(PXSteam* const pxSteam)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const int friendsGroupCount = steamFriends->GetFriendsGroupCount();
 
 	return friendsGroupCount;
 }
 
-unsigned short PXSteamFriendsGroupIDByIndex(PXSteam* const pxSteam, const unsigned int index)
-{
-	return 0;
-}
-
 PXSteamBool PXSteamFriendsGroupName(PXSteam* const pxSteam, const PXSteamFriendsGroupID friendsGroupID, void* const outputBuffer, const unsigned int outputBufferSize)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const char* groupName = steamFriends->GetFriendsGroupName(friendsGroupID);
 
 	PXSteamNameCopy(groupName, outputBuffer, outputBufferSize);
@@ -289,15 +331,31 @@ PXSteamBool PXSteamFriendsGroupName(PXSteam* const pxSteam, const PXSteamFriends
 
 unsigned int PXSteamFriendsGroupMembersCount(PXSteam* const pxSteam, const PXSteamFriendsGroupID friendsGroupID)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	unsigned int number = steamFriends->GetFriendsGroupMembersCount(friendsGroupID);
 
 	return number;
 }
 
+PXSteamBool PXSteamUserFetchMe(PXSteam* const pxSteam, PXSteamUser* const pxSteamUser)
+{
+	if (pxSteam->State != PXSteamStateLinked)
+	{
+		PXSteamMemoryClear(pxSteamUser, sizeof(PXSteamUser));
+		return 0u;
+	}
+
+	PXSteamProfileNameFetch(pxSteam, pxSteamUser->NameProfile, 64, &pxSteamUser->NameProfileLength);
+	pxSteamUser->ID = PXSteamProfileID(pxSteam);
+	pxSteamUser->Level = PXSteamProfileLevel(pxSteam);
+	pxSteamUser->State = PXSteamProfileState(pxSteam);
+
+	return 1;
+}
+
 PXSteamBool PXSteamFriendCheck(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iFriendFlags)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(steamIDFriend);
 	const bool has = steamFriends->HasFriend(steamID, iFriendFlags);
 
@@ -306,7 +364,7 @@ PXSteamBool PXSteamFriendCheck(PXSteam* const pxSteam, const PXSteamID steamIDFr
 
 unsigned int PXSteamClanCount(PXSteam* const pxSteam)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const unsigned int count = steamFriends->GetClanCount();
 
 	return count;
@@ -314,7 +372,7 @@ unsigned int PXSteamClanCount(PXSteam* const pxSteam)
 
 PXSteamID PXSteamClanByIndex(PXSteam* const pxSteam, int iClan)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = steamFriends->GetClanByIndex(iClan);
 	const PXSteamID pxSteamID = PXSteamIDBlockToID(steamID);
 
@@ -323,7 +381,7 @@ PXSteamID PXSteamClanByIndex(PXSteam* const pxSteam, int iClan)
 
 PXSteamBool PXSteamClanName(PXSteam* const pxSteam, const PXSteamID pxSteamID, void* const outputBuffer, const unsigned int outputBufferSize)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamID);
 	const char* clanName = steamFriends->GetClanName(steamID);
 
@@ -334,7 +392,7 @@ PXSteamBool PXSteamClanName(PXSteam* const pxSteam, const PXSteamID pxSteamID, v
 
 PXSteamBool PXSteamClanTag(PXSteam* const pxSteam, const PXSteamID pxSteamID, void* const outputBuffer, const unsigned int outputBufferSize)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamID);
 	const char* clanName = steamFriends->GetClanTag(steamID);
 
@@ -345,7 +403,7 @@ PXSteamBool PXSteamClanTag(PXSteam* const pxSteam, const PXSteamID pxSteamID, vo
 
 PXSteamBool PXSteamClanActivityCounts(PXSteam* const pxSteam, const PXSteamID pxSteamID, int* pnOnline, int* pnInGame, int* pnChatting)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(pxSteamID);
 
 
@@ -354,7 +412,7 @@ PXSteamBool PXSteamClanActivityCounts(PXSteam* const pxSteam, const PXSteamID px
 
 unsigned int PXSteamFriendCountFromSource(PXSteam* const pxSteam, const PXSteamID steamIDSource)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(steamIDSource);
 	const int count = steamFriends->GetFriendCountFromSource(steamID);
 
@@ -363,7 +421,7 @@ unsigned int PXSteamFriendCountFromSource(PXSteam* const pxSteam, const PXSteamI
 
 PXSteamID PXSteamFriendFromSourceByIndex(PXSteam* const pxSteam, const PXSteamID steamIDSource, int iFriend)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const CSteamID steamID = PXSteamIDBlockFromID(steamIDSource);
 	const CSteamID friendID = steamFriends->GetFriendFromSourceByIndex(steamID, iFriend);
 	const PXSteamUserID pxfriendID = PXSteamIDBlockToID(steamID);
@@ -404,19 +462,77 @@ void PXSteamActivateGameOverlayInviteDialog(PXSteam* const pxSteam, const PXStea
 {
 }
 
-int PXSteamGetSmallFriendAvatar(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+PXSteamBool PXSteamFriendAvatarFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, PXSteamAvatar* const pxSteamAvatar)
 {
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
+	ISteamUtils* const steamUtility = (ISteamUtils*)pxSteam->Utility;
+	const CSteamID steamID = PXSteamIDBlockFromID(steamIDFriend);
+
+	int imageID;
+
+	switch (pxSteamAvatar->SideLength)
+	{
+		case 32u:
+			imageID = steamFriends->GetSmallFriendAvatar(steamID);
+			break;
+
+		case 64u:
+			imageID = steamFriends->GetMediumFriendAvatar(steamID);
+			break;
+
+		case 184u:
+			imageID = steamFriends->GetLargeFriendAvatar(steamID);
+			break;
+
+		default:
+			return -1; // not a valid size
+	}
+
+	// check if big engougn
+	{
+		const bool isBigEnough = pxSteamAvatar->DataSize >= pxSteamAvatar->SideLength * 8;
+
+		if (!isBigEnough)
+		{
+			return -3;
+		}
+	}
+
+	const bool sucessful = steamUtility->GetImageRGBA(imageID, (uint8*)pxSteamAvatar->Data, pxSteamAvatar->DataSize);
+
+	if (!sucessful)
+	{
+		return -2;
+	}
+
 	return 0;
 }
 
-int PXSteamGetMediumFriendAvatar(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+PXSteamImageHandle PXSteamFriendAvatar32(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
 {
-	return 0;
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
+	const CSteamID steamID = PXSteamIDBlockFromID(steamIDFriend);
+	const PXSteamImageHandle imageID = steamFriends->GetSmallFriendAvatar(steamID);
+
+	return imageID;
 }
 
-int PXSteamGetLargeFriendAvatar(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+PXSteamImageHandle PXSteamFriendAvatar64(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
 {
-	return 0;
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
+	const CSteamID steamID = PXSteamIDBlockFromID(steamIDFriend);
+	const PXSteamImageHandle imageID = steamFriends->GetSmallFriendAvatar(steamID);
+
+	return imageID;
+}
+
+PXSteamImageHandle PXSteamFriendAvatar184(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
+{
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
+	const CSteamID steamID = PXSteamIDBlockFromID(steamIDFriend);
+	const PXSteamImageHandle imageID = steamFriends->GetSmallFriendAvatar(steamID);
+
+	return imageID;
 }
 
 PXSteamBool PXSteamRequestUserInformation(PXSteam* const pxSteam, const PXSteamID pxSteamID, const PXSteamBool bRequireNameOnly)
@@ -431,7 +547,7 @@ __int64 PXSteamRequestClanOfficerList(PXSteam* const pxSteam, const PXSteamID px
 
 const PXSteamID PXSteamGetClanOwner(PXSteam* const pxSteam, const PXSteamID pxSteamID)
 {
-	return PXSteamID();
+	return 0;
 }
 
 int PXSteamGetClanOfficerCount(PXSteam* const pxSteam, const PXSteamID pxSteamID)
@@ -441,17 +557,20 @@ int PXSteamGetClanOfficerCount(PXSteam* const pxSteam, const PXSteamID pxSteamID
 
 const PXSteamID PXSteamGetClanOfficerByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iOfficer)
 {
-	return PXSteamID();
+	return 0;
 }
 
 unsigned int PXSteamGetUserRestrictions(PXSteam* const pxSteam)
 {
-	return 0;
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
+	const unsigned int restrictionFlags = steamFriends->GetUserRestrictions();
+
+	return restrictionFlags;
 }
 
-unsigned short PXSteamFriendsGroupIDByIndex(const unsigned int index)
+unsigned short PXSteamFriendsGroupIDByIndex(PXSteam* const pxSteam, const unsigned int index)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const FriendsGroupID_t friendsGroupID = steamFriends->GetFriendsGroupIDByIndex(index);
 
 	return friendsGroupID;
@@ -459,8 +578,7 @@ unsigned short PXSteamFriendsGroupIDByIndex(const unsigned int index)
 
 unsigned int PXSteamFriendsFetchList(PXSteam* const pxSteam, const unsigned short searchFlags, PXSteamFriend* const pxSteamFriendList, const unsigned int pxSteamFriendListSize)
 {
-	ISteamFriends* const steamFriends = SteamFriends();
-
+	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	const unsigned int numberOfResults = PXSteamFriendsFetch(pxSteam, searchFlags);
 
 	if (numberOfResults == -1)
@@ -475,14 +593,14 @@ unsigned int PXSteamFriendsFetchList(PXSteam* const pxSteam, const unsigned shor
 
 		PXSteamFriend* const pxSteamFriend = &pxSteamFriendList[i];
 
-		pxSteamFriend->ID = userID;
-		pxSteamFriend->Friendship = PXSteamFriendsRelationship(pxSteam, userID);
-		pxSteamFriend->State = PXSteamFriendsPersonaState(pxSteam, userID);
-		pxSteamFriend->IsInGame = PXSteamFriendsGamePlayed(pxSteam, userID, &pxSteamFriend->GameInfo);
-		pxSteamFriend->Level = PXSteamFriendsSteamLevel(pxSteam, userID);
+		pxSteamFriend->User.ID = userID;
+		pxSteamFriend->User.State = PXSteamFriendsPersonaState(pxSteam, userID);
+		pxSteamFriend->User.Level = PXSteamFriendsSteamLevel(pxSteam, userID);
+		PXSteamFriendsName(pxSteam, userID, pxSteamFriend->User.NameProfile, 64, &pxSteamFriend->User.NameProfileLength);
 
-		PXSteamFriendsName(pxSteam, userID, pxSteamFriend->NameProfile, 64);
-		PXSteamFriendsNickname(pxSteam, userID, pxSteamFriend->NameNick, 64);
+		pxSteamFriend->Friendship = PXSteamFriendsRelationship(pxSteam, userID);
+		pxSteamFriend->IsInGame = PXSteamFriendsGamePlayed(pxSteam, userID, &pxSteamFriend->GameInfo);
+		PXSteamFriendsNickname(pxSteam, userID, pxSteamFriend->NameNick, 64, &pxSteamFriend->NameNickLength);
 	}
 
 	return numberOfResults;
@@ -528,7 +646,7 @@ int PXSteamGetCoplayFriendCount(PXSteam* const pxSteam)
 
 PXSteamID PXSteamGetCoplayFriend(PXSteam* const pxSteam, int iCoplayFriend)
 {
-	return PXSteamID();
+	return 0;
 }
 
 int PXSteamGetFriendCoplayTime(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
@@ -558,7 +676,7 @@ int PXSteamGetClanChatMemberCount(PXSteam* const pxSteam, const PXSteamID pxStea
 
 PXSteamID PXSteamGetChatMemberByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iUser)
 {
-	return PXSteamID();
+	return 0;
 }
 
 PXSteamBool PXSteamSendClanChatMessage(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, const char* pchText)

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PXSteamCS": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

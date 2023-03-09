@@ -1,11 +1,11 @@
 #include "Steam.hpp"
 
-bool PX::Stream::Initialize()
+bool PX::Steam::Initialize()
 {
 	return false;
 }
 
-void PX::Stream::Shutdown()
+void PX::Steam::Shutdown()
 {
 
 }
