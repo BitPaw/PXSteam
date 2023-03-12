@@ -18,9 +18,15 @@
     <ClCompile Include="Source\PXSteam.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="Source\SteamListener.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\PXSteam.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SteamListener.hpp">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

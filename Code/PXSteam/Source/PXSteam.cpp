@@ -1,13 +1,15 @@
 #include "PXSteam.h"
 
+#include "SteamListener.hpp"
+
 #include <Steam/steam_api.h>
 #include <Steam/isteamutils.h>
 #include <Steam/isteamuser.h>
 #include <string.h>
+#include <stdio.h>
 
 #define PXSteamIDBlockFromID(id) (*(CSteamID*)&id)
 #define PXSteamIDBlockToID(block) (*(__int64*)&block)
-
 
 unsigned int PXSteamNameCopy(const void* __restrict const source, void* __restrict destination, const unsigned int destinationMaxSize)
 {
@@ -167,6 +169,24 @@ PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateI
 		default:
 			return PXSteamFriendshipStatusInvalid;
 	}
+}
+
+void PXSteamPersonaChangeInfoFromID(PXSteamPersonaChangeInfo* const steamPersonaChangeInfo, unsigned short flagID)
+{
+	steamPersonaChangeInfo->Name = flagID & 0x0001;
+	steamPersonaChangeInfo->Status = flagID & 0x0002;
+	steamPersonaChangeInfo->ComeOnline = flagID & 0x0004;
+	steamPersonaChangeInfo->GoneOffline = flagID & 0x0008;
+	steamPersonaChangeInfo->GamePlayed = flagID & 0x0010;
+	steamPersonaChangeInfo->GameServer = flagID & 0x0020;
+	steamPersonaChangeInfo->Avatar = flagID & 0x0040;
+	steamPersonaChangeInfo->JoinedSource = flagID & 0x0080;
+	steamPersonaChangeInfo->LeftSource = flagID & 0x0100;
+	steamPersonaChangeInfo->RelationshipChanged = flagID & 0x0200;
+	steamPersonaChangeInfo->NameFirstSet = flagID & 0x0400;
+	steamPersonaChangeInfo->FacebookInfo = flagID & 0x0800;
+	steamPersonaChangeInfo->Nickname = flagID & 0x1000;
+	steamPersonaChangeInfo->SteamLevel = flagID & 0x2000;
 }
 
 PXSteamBool PXSteamProfileNameFetch(PXSteam* const pxSteam, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* writtenSize)
@@ -353,6 +373,22 @@ PXSteamBool PXSteamUserFetchMe(PXSteam* const pxSteam, PXSteamUser* const pxStea
 	return 1;
 }
 
+PXSteamBool PXSteamAppIDCreateFile(const unsigned int appID)
+{
+	const char filename[16] = "steam_appid.txt";
+
+	FILE* file = fopen(filename, "rb");
+	size_t writtenBytes = fprintf(file, "%d", appID);
+	int closeResult = fclose(file);
+
+	return writtenBytes > 0;
+}
+
+PXSteamBool PXSteamAppIDCreateFileTest()
+{
+	return PXSteamAppIDCreateFile(480);
+}
+
 PXSteamBool PXSteamFriendCheck(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iFriendFlags)
 {
 	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
@@ -462,13 +498,32 @@ void PXSteamActivateGameOverlayInviteDialog(PXSteam* const pxSteam, const PXStea
 {
 }
 
-PXSteamBool PXSteamFriendAvatarFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, PXSteamAvatar* const pxSteamAvatar)
+// 0 = OK
+// 1 = No image to load
+//  = Invalid Size
+//  = InputBufferTooSmal
+PXSteamErrorCode PXSteamFriendAvatarFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, PXSteamAvatar* const pxSteamAvatar)
 {
+	PX::SteamListener* steamListener = (PX::SteamListener*)pxSteam->Listener;
 	ISteamFriends* const steamFriends = (ISteamFriends*)pxSteam->Friends;
 	ISteamUtils* const steamUtility = (ISteamUtils*)pxSteam->Utility;
 	const CSteamID steamID = PXSteamIDBlockFromID(steamIDFriend);
 
 	int imageID;
+
+	volatile bool waitForData = steamFriends->RequestUserInformation(steamID, false);
+
+	while (waitForData)
+	{
+
+		STEAM_CALLBACK(PX::SteamListener, OnAvatarImageLoaded, AvatarImageLoaded_t);
+		
+		SteamAPI_RegisterCallback(AvatarImageLoaded_t, 0);
+
+
+		
+		
+	}
 
 	switch (pxSteamAvatar->SideLength)
 	{
@@ -485,7 +540,7 @@ PXSteamBool PXSteamFriendAvatarFetch(PXSteam* const pxSteam, const PXSteamID ste
 			break;
 
 		default:
-			return -1; // not a valid size
+			return PXSteamErrorInvalidImageSize; // not a valid size
 	}
 
 	// check if big engougn
@@ -494,18 +549,38 @@ PXSteamBool PXSteamFriendAvatarFetch(PXSteam* const pxSteam, const PXSteamID ste
 
 		if (!isBigEnough)
 		{
-			return -3;
+			return PXSteamErrorInputBufferTooSmal;
 		}
 	}
 
-	const bool sucessful = steamUtility->GetImageRGBA(imageID, (uint8*)pxSteamAvatar->Data, pxSteamAvatar->DataSize);
-
-	if (!sucessful)
+	switch (imageID)
 	{
-		return -2;
+		case 0: // No profile image
+		{
+			return PXSteamErrorNoImage;
+		}
+		case -1: // Profile image needs to be loaded ASYNC
+		{
+			break;
+		}
+		default:
+		{
+			const bool successful = steamUtility->GetImageRGBA(imageID, (uint8*)pxSteamAvatar->Data, pxSteamAvatar->DataSize);
+
+			if (!successful)
+			{
+				return PXSteamErrorImageLoadFailed;
+			}
+			else
+			{
+				return PXSteamErrorSuccess;
+			}
+
+			break;
+		}
 	}
 
-	return 0;
+	return PXSteamErrorInvalid;
 }
 
 PXSteamImageHandle PXSteamFriendAvatar32(PXSteam* const pxSteam, const PXSteamID steamIDFriend)
@@ -545,7 +620,7 @@ __int64 PXSteamRequestClanOfficerList(PXSteam* const pxSteam, const PXSteamID px
 	return 0;
 }
 
-const PXSteamID PXSteamGetClanOwner(PXSteam* const pxSteam, const PXSteamID pxSteamID)
+PXSteamID PXSteamGetClanOwner(PXSteam* const pxSteam, const PXSteamID pxSteamID)
 {
 	return 0;
 }
@@ -555,7 +630,7 @@ int PXSteamGetClanOfficerCount(PXSteam* const pxSteam, const PXSteamID pxSteamID
 	return 0;
 }
 
-const PXSteamID PXSteamGetClanOfficerByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iOfficer)
+PXSteamID PXSteamGetClanOfficerByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iOfficer)
 {
 	return 0;
 }

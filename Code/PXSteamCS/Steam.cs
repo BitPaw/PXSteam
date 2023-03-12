@@ -4,66 +4,40 @@ using System.Runtime.InteropServices;
 
 namespace PX
 {
-    public static class AdressFetch
-    {
-        public static unsafe UIntPtr GetAdress(this object obj)
-        {
-            TypedReference typedReference = __makeref(obj);
-            UIntPtr adress = **(UIntPtr**)(&typedReference);
-
-            return adress;
-        }
-    }
-
-
-
     public class Steam : IDisposable
-    {
-        private SteamUser _profileMine = new SteamUser();
-        private SteamContext _context = new SteamContext();
-        //private IntPtr _contextAdress = IntPtr.Zero;
-        //private GCHandle handle;
-      //  public SteamContext Context { get => _context; }
-
-
-      [DllImport("PXSteam.dll")] private static unsafe extern void PXSteamConstruct(SteamContext* steamContext);
+    {   
+        //---<PXSteam C-Callbacks>---------------------------------------------
+        [DllImport("PXSteam.dll")] private static unsafe extern void PXSteamConstruct(SteamContext* steamContext);
         [DllImport("PXSteam.dll")] private static unsafe extern void PXSteamDestruct(SteamContext* steamContext);
         [DllImport("PXSteam.dll")] private static unsafe extern bool PXSteamInitialize(SteamContext* steamContext);
         [DllImport("PXSteam.dll")] private static unsafe extern void PXSteamShutdown(SteamContext* steamContext);
+        [DllImport("PXSteam.dll")] private static extern bool PXSteamAppIDCreateFile(uint appID);
+        [DllImport("PXSteam.dll")] private static extern bool PXSteamAppIDCreateFileTest();
 
         [DllImport("PXSteam.dll")] private static unsafe extern bool PXSteamUserFetchMe(SteamContext* steamContext, SteamUserRaw* steamUser);
         //[DllImport("PXSteam.dll")] private static extern bool PXSteamUserFetchMe(IntPtr steamContext, IntPtr steamUser);
 
-
         [DllImport("PXSteam.dll")] private static unsafe extern uint PXSteamFriendsFetch(SteamContext* pxSteam, ushort searchFlags);
         [DllImport("PXSteam.dll")] private static unsafe extern uint PXSteamFriendsFetchList(SteamContext* pxSteam, ushort searchFlags, SteamFriendRaw* pxSteamFriendList, uint pxSteamFriendListSize);
 
+        [DllImport("PXSteam.dll")] private static unsafe extern uint PXSteamFriendAvatarFetch(SteamContext* pxSteam, Int64 steamUserID, SteamAvatarRaw* steamAvatar);
+        //---------------------------------------------------------------------
 
+        //---------------------------------------------------------------------
+        private SteamUser _profileMine = new SteamUser();
+        private SteamContext _context = new SteamContext();
+        //---------------------------------------------------------------------
 
-
-
-
-
-        //public unsafe SteamUser ProfileMine { get => ProfileMyself(); }
-        //public bool IsInitialized { get; private set; }
-
-
-        public unsafe Steam()
+        public void Dispose()
         {
-            
+            Shutdown();
         }
 
         public unsafe bool Initialize()
         {
             bool sucess = false;
 
-            //handle = GCHandle.Alloc(_context, GCHandleType.Pinned);
-            //_contextAdress = GCHandle.ToIntPtr(handle);
-
-            //TypedReference typedReference = __makeref(_context);
-            //_contextAdress = **(UIntPtr**)(&typedReference);
-
-            fixed(SteamContext* steamContext = &_context)
+            fixed (SteamContext* steamContext = &_context)
             {
                 PXSteamConstruct(steamContext);
                 sucess = PXSteamInitialize(steamContext);
@@ -78,9 +52,17 @@ namespace PX
             {
                 PXSteamShutdown(steamContext);
                 PXSteamDestruct(steamContext);
-            }          
+            }
+        }
 
-            //handle.Free();
+        public static bool SteamAppIDCreateFile(uint appID)
+        {
+            return PXSteamAppIDCreateFile(appID);
+        }
+
+        public static bool SteamAppIDCreateFileTest()
+        {
+            return PXSteamAppIDCreateFileTest();
         }
 
         public unsafe SteamUser ProfileMyself()
@@ -98,11 +80,9 @@ namespace PX
                     _profileMine.Set(steamUserRaw);
                 }
             }
-       
+
             return _profileMine;
         }
-
-
 
         public unsafe List<SteamFriend> FriendsFetch(SteamFriendSearchFilter friendSearchFilter)
         {
@@ -137,9 +117,28 @@ namespace PX
             return steamFriends;
         }
 
-        public void Dispose()
+
+        public unsafe SteamAvatar UserImage(Int64 steamUserID, SteamAvatarSize steamAvatarSize)
         {
-            Shutdown();
+            SteamAvatarRaw steamAvatarRaw = new SteamAvatarRaw();
+            SteamAvatar steamAvatar = null;
+
+            const int imageBufferSizeMax = 184 * 184 * 4;
+            byte[] imageBufferCache = new byte[imageBufferSizeMax];
+
+            fixed (SteamContext* steamContext = &_context)
+            {        
+                fixed(byte* imageBufferAdress = &imageBufferCache[0])
+                {
+                    steamAvatarRaw.Set(imageBufferAdress, imageBufferSizeMax, steamAvatarSize);
+
+                    steamAvatar = new SteamAvatar();
+                    steamAvatar.Code = (SteamErrorCode)PXSteamFriendAvatarFetch(steamContext, steamUserID, &steamAvatarRaw);
+                    steamAvatar.Set(steamAvatarRaw);
+                }
+            }          
+
+            return steamAvatar;
         }
     }
 }

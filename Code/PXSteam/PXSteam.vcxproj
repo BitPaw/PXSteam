@@ -171,9 +171,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\SteamListener.cpp" />
     <ClCompile Include="Source\PXSteam.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\SteamListener.hpp" />
     <ClInclude Include="Source\PXSteam.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

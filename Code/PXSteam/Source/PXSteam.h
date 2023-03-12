@@ -1,6 +1,7 @@
 #ifndef PXSteamINCLUDE
 #define PXSteamINCLUDE
 
+#define PXSteamPrivate static
 #define PXSteamPublic __declspec(dllexport)
 
 #define PXSteamFriendFlagNone	0x00
@@ -142,6 +143,8 @@ extern "C"
 		void* Friends;
 		void* User;
 		void* Utility;
+
+		unsigned char Listener[64];
 	}
 	PXSteam;
 
@@ -179,13 +182,42 @@ extern "C"
 
 	typedef struct PXSteamAvatar_
 	{
-		unsigned char SideLength;
 		void* Data;
 		unsigned int DataSize;
+		unsigned char SideLength;
 	}
 	PXSteamAvatar;
 
+	typedef enum PXSteamErrorCode
+	{
+		PXSteamErrorInvalid,
+		PXSteamErrorSuccess,
 
+		PXSteamErrorInvalidImageSize,
+		PXSteamErrorNoImage,
+		PXSteamErrorImageLoadFailed,
+		PXSteamErrorInputBufferTooSmal
+	}
+	PXSteamErrorCode;
+
+	typedef struct PXSteamPersonaChangeInfo_
+	{
+		unsigned char Name;
+		unsigned char Status;
+		unsigned char ComeOnline;
+		unsigned char GoneOffline;
+		unsigned char GamePlayed;
+		unsigned char GameServer;
+		unsigned char Avatar;
+		unsigned char JoinedSource;
+		unsigned char LeftSource;
+		unsigned char RelationshipChanged;
+		unsigned char NameFirstSet;
+		unsigned char FacebookInfo;
+		unsigned char Nickname;
+		unsigned char SteamLevel;
+	}
+	PXSteamPersonaChangeInfo;
 
 	//---<Core>--------------------
 	PXSteamPublic void PXSteamConstruct(PXSteam* const pxSteam);
@@ -193,14 +225,17 @@ extern "C"
 
 	PXSteamPublic PXSteamBool PXSteamInitialize(PXSteam* const pxSteam);
 	PXSteamPublic void PXSteamShutdown(PXSteam* const pxSteam);
+	PXSteamPublic PXSteamBool PXSteamAppIDCreateFile(const unsigned int appID);
+	PXSteamPublic PXSteamBool PXSteamAppIDCreateFileTest();
 	//-------------------------------------------------------------------------
 
-	void PXSteamMemoryClear(void* __restrict const target, const unsigned int targetSize);
-	unsigned int PXSteamNameCopy(const void* __restrict const source, void* __restrict destination, const unsigned int destinationMaxSize);
+	PXSteamPrivate void PXSteamMemoryClear(void* __restrict const target, const unsigned int targetSize);
+	PXSteamPrivate unsigned int PXSteamNameCopy(const void* __restrict const source, void* __restrict destination, const unsigned int destinationMaxSize);
 
 	//-------------------------------------------------------------------------
 	PXSteamPublic PXSteamUserActiveState PXSteamProfileStateFromID(const unsigned char stateID);
 	PXSteamPublic PXSteamFriendshipStatus PXSteamFriendshipStatusFromID(const unsigned char stateID);
+	PXSteamPrivate void PXSteamPersonaChangeInfoFromID(PXSteamPersonaChangeInfo* const steamPersonaChangeInfo, unsigned short flagID);
 	//-------------------------------------------------------------------------
 
 
@@ -225,36 +260,36 @@ extern "C"
 
 
 
-	PXSteamFriendshipStatus PXSteamFriendsRelationship(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID);
-	PXSteamUserActiveState PXSteamFriendsPersonaState(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID);
+	PXSteamPublic PXSteamFriendshipStatus PXSteamFriendsRelationship(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID);
+	PXSteamPublic PXSteamUserActiveState PXSteamFriendsPersonaState(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID);
 
-	PXSteamBool PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* const outputBufferWritten);
+	PXSteamPublic PXSteamBool PXSteamFriendsName(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* const outputBufferWritten);
 
 	// returns true if the friend is actually in a game, and fills in pFriendGameInfo with an extra details 
-	PXSteamBool PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, PXSteamFriendGameInfo* const pxSteamFriendGameInfoList);
+	PXSteamPublic PXSteamBool PXSteamFriendsGamePlayed(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, PXSteamFriendGameInfo* const pxSteamFriendGameInfoList);
 
 	// accesses old friends names - returns an empty string when their are no more items in the history
 	//const char* PXSteamFriendsPersonaNameHistory(const PXSteamID steamIDFriend, int iPersonaName);
 
 	// friends steam level
-	int PXSteamFriendsSteamLevel(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID);
+	PXSteamPublic int PXSteamFriendsSteamLevel(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID);
 
 	// Returns nickname the current user has set for the specified player. Returns NULL if the no nickname has been set for that player.
 	// DEPRECATED: GetPersonaName follows the Steam nickname preferences, so apps shouldn't need to care about nicknames explicitly.
-	PXSteamBool PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* const outputBufferWritten);
+	PXSteamPublic PXSteamBool PXSteamFriendsNickname(PXSteam* const pxSteam, const PXSteamUserID pxSteamUserID, void* const outputBuffer, const unsigned int outputBufferSize, unsigned int* const outputBufferWritten);
 
 
-	PXSteamBool PXSteamFriendAvatarFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, PXSteamAvatar* const pxSteamAvatar);
+	PXSteamPublic PXSteamErrorCode PXSteamFriendAvatarFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, PXSteamAvatar* const pxSteamAvatar);
 
 	// gets the small (32x32) avatar of the current user, which is a handle to be used in IClientUtils::GetImageRGBA(), or 0 if none set
-	PXSteamImageHandle PXSteamFriendAvatar32(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
+	PXSteamPublic PXSteamImageHandle PXSteamFriendAvatar32(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
 
 	// gets the medium (64x64) avatar of the current user, which is a handle to be used in IClientUtils::GetImageRGBA(), or 0 if none set
-	PXSteamImageHandle PXSteamFriendAvatar64(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
+	PXSteamPublic PXSteamImageHandle PXSteamFriendAvatar64(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
 
 	// gets the large (184x184) avatar of the current user, which is a handle to be used in IClientUtils::GetImageRGBA(), or 0 if none set
 	// returns -1 if this image has yet to be loaded, in this case wait for a AvatarImageLoaded_t callback and then call this again
-	PXSteamImageHandle PXSteamFriendAvatar184(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
+	PXSteamPublic PXSteamImageHandle PXSteamFriendAvatar184(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
 
 
 
@@ -262,31 +297,31 @@ extern "C"
 
 	//---<friend grouping (tag) apis>---------------------------------------------
 	// returns the number of friends groups
-	unsigned int PXSteamFriendsGroupCount(PXSteam* const pxSteam);
+	PXSteamPublic unsigned int PXSteamFriendsGroupCount(PXSteam* const pxSteam);
 
 	// returns the friends group ID for the given index (invalid indices return k_FriendsGroupID_Invalid)
-	unsigned short PXSteamFriendsGroupIDByIndex(PXSteam* const pxSteam, const unsigned int index);
+	PXSteamPublic unsigned short PXSteamFriendsGroupIDByIndex(PXSteam* const pxSteam, const unsigned int index);
 
 	// returns the name for the given friends group (NULL in the case of invalid friends group IDs)
-	PXSteamBool PXSteamFriendsGroupName(PXSteam* const pxSteam, const PXSteamFriendsGroupID friendsGroupID, void* const outputBuffer, const unsigned int outputBufferSize);
+	PXSteamPublic PXSteamBool PXSteamFriendsGroupName(PXSteam* const pxSteam, const PXSteamFriendsGroupID friendsGroupID, void* const outputBuffer, const unsigned int outputBufferSize);
 
 	// returns the number of members in a given friends group
-	unsigned int PXSteamFriendsGroupMembersCount(PXSteam* const pxSteam, const PXSteamFriendsGroupID friendsGroupID);
+	PXSteamPublic unsigned int PXSteamFriendsGroupMembersCount(PXSteam* const pxSteam, const PXSteamFriendsGroupID friendsGroupID);
 
 	// gets up to nMembersCount members of the given friends group, if fewer exist than requested those positions' SteamIDs will be invalid
 	//void GetFriendsGroupMembersList(FriendsGroupID_t friendsGroupID, STEAM_OUT_ARRAY_CALL(nMembersCount, GetFriendsGroupMembersCount, friendsGroupID) const PXSteamID* pOutSteamIDMembers, int nMembersCount);
 
 	// returns true if the specified user meets any of the criteria specified in iFriendFlags
 	// iFriendFlags can be the union (binary or, |) of one or more k_EFriendFlags values
-	PXSteamBool PXSteamFriendCheck(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iFriendFlags);
+	PXSteamPublic PXSteamBool PXSteamFriendCheck(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iFriendFlags);
 
 	// clan (group) iteration and access functions
-	unsigned int PXSteamClanCount(PXSteam* const pxSteam);
-	PXSteamID PXSteamClanByIndex(PXSteam* const pxSteam, int iClan);
-	PXSteamBool PXSteamClanName(PXSteam* const pxSteam, const PXSteamID pxSteamID, void* const outputBuffer, const unsigned int outputBufferSize);
-	PXSteamBool PXSteamClanTag(PXSteam* const pxSteam, const PXSteamID pxSteamID, void* const outputBuffer, const unsigned int outputBufferSize);
+	PXSteamPublic unsigned int PXSteamClanCount(PXSteam* const pxSteam);
+	PXSteamPublic PXSteamID PXSteamClanByIndex(PXSteam* const pxSteam, int iClan);
+	PXSteamPublic PXSteamBool PXSteamClanName(PXSteam* const pxSteam, const PXSteamID pxSteamID, void* const outputBuffer, const unsigned int outputBufferSize);
+	PXSteamPublic PXSteamBool PXSteamClanTag(PXSteam* const pxSteam, const PXSteamID pxSteamID, void* const outputBuffer, const unsigned int outputBufferSize);
 	// returns the most recent information we have about what's happening in a clan
-	PXSteamBool PXSteamClanActivityCounts(PXSteam* const pxSteam, const PXSteamID pxSteamID, int* pnOnline, int* pnInGame, int* pnChatting);
+	PXSteamPublic PXSteamBool PXSteamClanActivityCounts(PXSteam* const pxSteam, const PXSteamID pxSteamID, int* pnOnline, int* pnInGame, int* pnChatting);
 
 	// for clans a user is a member of, they will have reasonably up-to-date information, but for others you'll have to download the info to have the latest
 	//SteamAPICall_t DownloadClanActivityCounts(STEAM_ARRAY_COUNT(cClansToRequest) const PXSteamID* psteamIDClans, int cClansToRequest);
@@ -295,19 +330,19 @@ extern "C"
 	// note that large clans that cannot be iterated by the local user
 	// note that the current user must be in a lobby to retrieve const PXSteamIDs of other users in that lobby
 	// steamIDSource can be the steamID of a group, game server, lobby or chat room
-	unsigned int PXSteamFriendCountFromSource(PXSteam* const pxSteam, const PXSteamID steamIDSource);
-	PXSteamID PXSteamFriendFromSourceByIndex(PXSteam* const pxSteam, const PXSteamID steamIDSource, int iFriend);
+	PXSteamPublic unsigned int PXSteamFriendCountFromSource(PXSteam* const pxSteam, const PXSteamID steamIDSource);
+	PXSteamPublic PXSteamID PXSteamFriendFromSourceByIndex(PXSteam* const pxSteam, const PXSteamID steamIDSource, int iFriend);
 
 	// returns true if the local user can see that steamIDUser is a member or in steamIDSource
-	PXSteamBool PXSteamIsUserInSource(PXSteam* const pxSteam, const PXSteamID pxSteamID, const PXSteamID steamIDSource);
+	PXSteamPublic PXSteamBool PXSteamIsUserInSource(PXSteam* const pxSteam, const PXSteamID pxSteamID, const PXSteamID steamIDSource);
 
 	// User is in a game pressing the talk button (will suppress the microphone for all voice comms from the Steam friends UI)
-	void PXSteamSetInGameVoiceSpeaking(PXSteam* const pxSteam, const PXSteamID pxSteamID, bool bSpeaking);
+	PXSteamPublic void PXSteamSetInGameVoiceSpeaking(PXSteam* const pxSteam, const PXSteamID pxSteamID, bool bSpeaking);
 
 	// activates the game overlay, with an optional dialog to open 
 	// valid options include "Friends", "Community", "Players", "Settings", "OfficialGameGroup", "Stats", "Achievements",
 	// "chatroomgroup/nnnn"
-	void PXSteamActivateGameOverlay(PXSteam* const pxSteam, const char* pchDialog);
+	PXSteamPublic void PXSteamActivateGameOverlay(PXSteam* const pxSteam, const char* pchDialog);
 
 	// activates game overlay to a specific place
 	// valid options are
@@ -320,20 +355,20 @@ extern "C"
 	//		"friendremove" - opens the overlay in minimal mode prompting the user to remove the target friend
 	//		"friendrequestaccept" - opens the overlay in minimal mode prompting the user to accept an incoming friend invite
 	//		"friendrequestignore" - opens the overlay in minimal mode prompting the user to ignore an incoming friend invite
-	void PXSteamActivateGameOverlayToUser(PXSteam* const pxSteam, const char* pchDialog, const PXSteamID steamID);
+	PXSteamPublic void PXSteamActivateGameOverlayToUser(PXSteam* const pxSteam, const char* pchDialog, const PXSteamID steamID);
 
 	// activates game overlay web browser directly to the specified URL
 	// full address with protocol type is required, e.g. http://www.steamgames.com/
-	void ActivateGameOverlayToWebPage(PXSteam* const pxSteam, const char* pchURL, PXActivateGameOverlayToWebPageMode eMode);
+	PXSteamPublic void ActivateGameOverlayToWebPage(PXSteam* const pxSteam, const char* pchURL, PXActivateGameOverlayToWebPageMode eMode);
 
 	// activates game overlay to store page for app
-	void PXSteamActivateGameOverlayToStore(PXSteam* const pxSteam, unsigned int nAppID, PXSteamOverlayToStoreFlag eFlag);
+	PXSteamPublic void PXSteamActivateGameOverlayToStore(PXSteam* const pxSteam, unsigned int nAppID, PXSteamOverlayToStoreFlag eFlag);
 
 	// Mark a target user as 'played with'. This is a client-side only feature that requires that the calling user is in game 
-	void PXSteamSetPlayedWith(PXSteam* const pxSteam, const PXSteamID pxSteamIDPlayedWith);
+	PXSteamPublic void PXSteamSetPlayedWith(PXSteam* const pxSteam, const PXSteamID pxSteamIDPlayedWith);
 
 	// activates game overlay to open the invite dialog. Invitations will be sent for the provided lobby.
-	void PXSteamActivateGameOverlayInviteDialog(PXSteam* const pxSteam, const PXSteamID steamIDLobby);
+	PXSteamPublic void PXSteamActivateGameOverlayInviteDialog(PXSteam* const pxSteam, const PXSteamID steamIDLobby);
 
 
 
@@ -347,7 +382,7 @@ extern "C"
 	// - it's a lot slower to download avatars and churns the local cache, so if you don't need avatars, don't request them
 	// if returns true, it means that data is being requested, and a PersonaStateChanged_t callback will be posted when it's retrieved
 	// if returns false, it means that we already have all the details about that user, and functions can be called immediately
-	PXSteamBool PXSteamRequestUserInformation(PXSteam* const pxSteam, const PXSteamID pxSteamID, const PXSteamBool bRequireNameOnly);
+	PXSteamPublic PXSteamBool PXSteamRequestUserInformation(PXSteam* const pxSteam, const PXSteamID pxSteamID, const PXSteamBool bRequireNameOnly);
 
 	// requests information about a clan officer list
 	// when complete, data is returned in ClanOfficerListResponse_t call result
@@ -355,20 +390,20 @@ extern "C"
 	// you can only ask about clans that a user is a member of
 	// note that this won't download avatars automatically; if you get an officer,
 	// and no avatar image is available, call RequestUserInformation( steamID, false ) to download the avatar
-	__int64 PXSteamRequestClanOfficerList(PXSteam* const pxSteam, const PXSteamID pxSteamID);
+	PXSteamPublic __int64 PXSteamRequestClanOfficerList(PXSteam* const pxSteam, const PXSteamID pxSteamID);
 
 	// iteration of clan officers - can only be done when a RequestClanOfficerList() call has completed
 
 	// returns the steamID of the clan owner
-	const PXSteamID PXSteamGetClanOwner(PXSteam* const pxSteam, const PXSteamID pxSteamID);
+	PXSteamPublic PXSteamID PXSteamGetClanOwner(PXSteam* const pxSteam, const PXSteamID pxSteamID);
 	// returns the number of officers in a clan (including the owner)
-	int PXSteamGetClanOfficerCount(PXSteam* const pxSteam, const PXSteamID pxSteamID);
+	PXSteamPublic int PXSteamGetClanOfficerCount(PXSteam* const pxSteam, const PXSteamID pxSteamID);
 	// returns the steamID of a clan officer, by index, of range [0,GetClanOfficerCount)
-	const PXSteamID PXSteamGetClanOfficerByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iOfficer);
+	PXSteamPublic PXSteamID PXSteamGetClanOfficerByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iOfficer);
 	// if current user is chat restricted, he can't send or receive any text/voice chat messages.
 	// the user can't see custom avatars. But the user can be online and send/recv game invites.
 	// a chat restricted user can't add friends or join any groups.
-	unsigned int PXSteamGetUserRestrictions(PXSteam* const pxSteam);
+	PXSteamPublic unsigned int PXSteamGetUserRestrictions(PXSteam* const pxSteam);
 
 	// Rich Presence data is automatically shared between friends who are in the same game
 	// Each user has a set of Key/Value pairs
@@ -386,58 +421,58 @@ extern "C"
 	// SetRichPresence() to a NULL or an empty string deletes the key
 	// You can iterate the current set of keys for a friend with GetFriendRichPresenceKeyCount()
 	// and GetFriendRichPresenceKeyByIndex() (typically only used for debugging)
-	PXSteamBool PXSteamRichPresenceChange(PXSteam* const pxSteam, const char* pchKey, const char* pchValue);
-	void PXSteamClearRichPresence(PXSteam* const pxSteam);
-	PXSteamBool PXSteamFriendRichPresenceFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, const char* pchKey, void* const outputBuffer, const unsigned int outputBufferSize);
-	int PXSteamFriendRichPresenceKeyCountFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, void* const outputBuffer, const unsigned int outputBufferSize);
-	PXSteamBool PXSteamFriendRichPresenceKeyByIndex(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iKey);
+	PXSteamPublic PXSteamBool PXSteamRichPresenceChange(PXSteam* const pxSteam, const char* pchKey, const char* pchValue);
+	PXSteamPublic void PXSteamClearRichPresence(PXSteam* const pxSteam);
+	PXSteamPublic PXSteamBool PXSteamFriendRichPresenceFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, const char* pchKey, void* const outputBuffer, const unsigned int outputBufferSize);
+	PXSteamPublic int PXSteamFriendRichPresenceKeyCountFetch(PXSteam* const pxSteam, const PXSteamID steamIDFriend, void* const outputBuffer, const unsigned int outputBufferSize);
+	PXSteamPublic PXSteamBool PXSteamFriendRichPresenceKeyByIndex(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iKey);
 	// Requests rich presence for a specific user.
-	void PXSteamRequestFriendRichPresence(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
+	PXSteamPublic void PXSteamRequestFriendRichPresence(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
 
 	// Rich invite support.
 	// If the target accepts the invite, a GameRichPresenceJoinRequested_t callback is posted containing the connect string.
 	// (Or you can configure your game so that it is passed on the command line instead.  This is a deprecated path; ask us if you really need this.)
-	PXSteamBool PXSteamUserInviteToGame(PXSteam* const pxSteam, const PXSteamID steamIDFriend, const char* pchConnectString);
+	PXSteamPublic PXSteamBool PXSteamUserInviteToGame(PXSteam* const pxSteam, const PXSteamID steamIDFriend, const char* pchConnectString);
 
 	// recently-played-with friends iteration
 	// this iterates the entire list of users recently played with, across games
 	// GetFriendCoplayTime() returns as a unix time
-	int PXSteamGetCoplayFriendCount(PXSteam* const pxSteam);
-	PXSteamID PXSteamGetCoplayFriend(PXSteam* const pxSteam, int iCoplayFriend);
-	int PXSteamGetFriendCoplayTime(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
-	unsigned int PXSteamGetFriendCoplayGame(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
+	PXSteamPublic int PXSteamGetCoplayFriendCount(PXSteam* const pxSteam);
+	PXSteamPublic PXSteamID PXSteamGetCoplayFriend(PXSteam* const pxSteam, int iCoplayFriend);
+	PXSteamPublic int PXSteamGetFriendCoplayTime(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
+	PXSteamPublic unsigned int PXSteamGetFriendCoplayGame(PXSteam* const pxSteam, const PXSteamID steamIDFriend);
 
 	// chat interface for games
 	// this allows in-game access to group (clan) chats from in the game
 	// the behavior is somewhat sophisticated, because the user may or may not be already in the group chat from outside the game or in the overlay
 	// use ActivateGameOverlayToUser( "chat", steamIDClan ) to open the in-game overlay version of the chat
-	__int64 PXSteamJoinClanChatRoom(PXSteam* const pxSteam, const PXSteamID pxSteamID);
-	PXSteamBool PXSteamLeaveClanChatRoom(PXSteam* const pxSteam, const PXSteamID pxSteamID);
-	int PXSteamGetClanChatMemberCount(PXSteam* const pxSteam, const PXSteamID pxSteamID);
-	PXSteamID PXSteamGetChatMemberByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iUser);
-	PXSteamBool PXSteamSendClanChatMessage(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, const char* pchText);
-	int PXSteamGetClanChatMessage(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, int iMessage, void* prgchText, int cchTextMax, PXSteamChatEntryType* peChatEntryType, PXSteamID* psteamidChatter);
-	PXSteamBool PXSteamIsClanChatAdmin(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, const PXSteamID pxSteamID);
+	PXSteamPublic __int64 PXSteamJoinClanChatRoom(PXSteam* const pxSteam, const PXSteamID pxSteamID);
+	PXSteamPublic PXSteamBool PXSteamLeaveClanChatRoom(PXSteam* const pxSteam, const PXSteamID pxSteamID);
+	PXSteamPublic int PXSteamGetClanChatMemberCount(PXSteam* const pxSteam, const PXSteamID pxSteamID);
+	PXSteamPublic PXSteamID PXSteamGetChatMemberByIndex(PXSteam* const pxSteam, const PXSteamID pxSteamID, int iUser);
+	PXSteamPublic PXSteamBool PXSteamSendClanChatMessage(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, const char* pchText);
+	PXSteamPublic int PXSteamGetClanChatMessage(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, int iMessage, void* prgchText, int cchTextMax, PXSteamChatEntryType* peChatEntryType, PXSteamID* psteamidChatter);
+	PXSteamPublic PXSteamBool PXSteamIsClanChatAdmin(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat, const PXSteamID pxSteamID);
 
 	// interact with the Steam (game overlay / desktop)
-	PXSteamBool PXSteamIsClanChatWindowOpenInSteam(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat);
-	PXSteamBool PXSteamOpenClanChatWindowInSteam(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat);
-	PXSteamBool PXSteamCloseClanChatWindowInSteam(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat);
+	PXSteamPublic PXSteamBool PXSteamIsClanChatWindowOpenInSteam(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat);
+	PXSteamPublic PXSteamBool PXSteamOpenClanChatWindowInSteam(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat);
+	PXSteamPublic PXSteamBool PXSteamCloseClanChatWindowInSteam(PXSteam* const pxSteam, const PXSteamID pxSteamIDChat);
 
 	// peer-to-peer chat interception
 	// this is so you can show P2P chats inline in the game
-	PXSteamBool PXSteamSetListenForFriendsMessages(PXSteam* const pxSteam, bool bInterceptEnabled);
-	PXSteamBool PXSteamReplyToFriendMessage(PXSteam* const pxSteam, const PXSteamID steamIDFriend, const char* pchMsgToSend);
-	int PXSteamGetFriendMessage(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iMessageID, void* pvData, int cubData, PXSteamChatEntryType* peChatEntryType);
+	PXSteamPublic PXSteamBool PXSteamSetListenForFriendsMessages(PXSteam* const pxSteam, bool bInterceptEnabled);
+	PXSteamPublic PXSteamBool PXSteamReplyToFriendMessage(PXSteam* const pxSteam, const PXSteamID steamIDFriend, const char* pchMsgToSend);
+	PXSteamPublic int PXSteamGetFriendMessage(PXSteam* const pxSteam, const PXSteamID steamIDFriend, int iMessageID, void* pvData, int cubData, PXSteamChatEntryType* peChatEntryType);
 
 	// following apis
 
-	__int64 PXSteamGetFollowerCount(PXSteam* const pxSteam, const PXSteamID steamID);
-	__int64 PXSteamIsFollowing(PXSteam* const pxSteam, const PXSteamID steamID);
-	__int64 PXSteamEnumerateFollowingList(PXSteam* const pxSteam, unsigned int unStartIndex);
+	PXSteamPublic __int64 PXSteamGetFollowerCount(PXSteam* const pxSteam, const PXSteamID steamID);
+	PXSteamPublic __int64 PXSteamIsFollowing(PXSteam* const pxSteam, const PXSteamID steamID);
+	PXSteamPublic __int64 PXSteamEnumerateFollowingList(PXSteam* const pxSteam, unsigned int unStartIndex);
 
-	PXSteamBool PXSteamIsClanPublic(PXSteam* const pxSteam, const PXSteamID pxSteamID);
-	PXSteamBool PXSteamIsClanOfficialGameGroup(PXSteam* const pxSteam, const PXSteamID pxSteamID);
+	PXSteamPublic PXSteamBool PXSteamIsClanPublic(PXSteam* const pxSteam, const PXSteamID pxSteamID);
+	PXSteamPublic PXSteamBool PXSteamIsClanOfficialGameGroup(PXSteam* const pxSteam, const PXSteamID pxSteamID);
 
 	/// Return the number of chats (friends or chat rooms) with unread messages.
 	/// A "priority" message is one that would generate some sort of toast or
@@ -445,25 +480,25 @@ extern "C"
 	///
 	/// You can register for UnreadChatMessagesChanged_t callbacks to know when this
 	/// has potentially changed.
-	int PXSteamGetNumChatsWithUnreadPriorityMessages(PXSteam* const pxSteam);
+	PXSteamPublic int PXSteamGetNumChatsWithUnreadPriorityMessages(PXSteam* const pxSteam);
 
 	// activates game overlay to open the remote play together invite dialog. Invitations will be sent for remote play together
-	void PXSteamActivateGameOverlayRemotePlayTogetherInviteDialog(PXSteam* const pxSteam, const PXSteamID steamIDLobby);
+	PXSteamPublic void PXSteamActivateGameOverlayRemotePlayTogetherInviteDialog(PXSteam* const pxSteam, const PXSteamID steamIDLobby);
 
 	// Call this before calling ActivateGameOverlayToWebPage() to have the Steam Overlay Browser block navigations
 	// to your specified protocol (scheme) uris and instead dispatch a OverlayBrowserProtocolNavigation_t callback to your game.
 	// ActivateGameOverlayToWebPage() must have been called with k_EActivateGameOverlayToWebPageMode_Modal
-	PXSteamBool PXSteamRegisterProtocolInOverlayBrowser(PXSteam* const pxSteam, const char* pchProtocol);
+	PXSteamPublic PXSteamBool PXSteamRegisterProtocolInOverlayBrowser(PXSteam* const pxSteam, const char* pchProtocol);
 
 	// Activates the game overlay to open an invite dialog that will send the provided Rich Presence connect string to selected friends
-	void PXSteamActivateGameOverlayInviteDialogConnectString(PXSteam* const pxSteam, const char* pchConnectString);
+	PXSteamPublic void PXSteamActivateGameOverlayInviteDialogConnectString(PXSteam* const pxSteam, const char* pchConnectString);
 
 	// Steam Community items equipped by a user on their profile
 	// You can register for EquippedProfileItemsChanged_t to know when a friend has changed their equipped profile items
-	__int64 PXSteamRequestEquippedProfileItems(PXSteam* const pxSteam, const PXSteamID steamID);
-	PXSteamBool PXSteamBHasEquippedProfileItem(PXSteam* const pxSteam, const PXSteamID steamID, const PXSteamCommunityProfileItemType itemType);
-	PXSteamBool PXSteamGetProfileItemPropertyString(PXSteam* const pxSteam, const PXSteamID steamID, const PXSteamCommunityProfileItemType itemType, const PXSteamCommunityProfileItemProperty prop, void* const outputBuffer, const unsigned int outputBufferSize);
-	unsigned int PXSteamGetProfileItemPropertyUint(PXSteam* const pxSteam, const PXSteamID steamID, const PXSteamCommunityProfileItemType itemType, const PXSteamCommunityProfileItemProperty prop);
+	PXSteamPublic __int64 PXSteamRequestEquippedProfileItems(PXSteam* const pxSteam, const PXSteamID steamID);
+	PXSteamPublic PXSteamBool PXSteamBHasEquippedProfileItem(PXSteam* const pxSteam, const PXSteamID steamID, const PXSteamCommunityProfileItemType itemType);
+	PXSteamPublic PXSteamBool PXSteamGetProfileItemPropertyString(PXSteam* const pxSteam, const PXSteamID steamID, const PXSteamCommunityProfileItemType itemType, const PXSteamCommunityProfileItemProperty prop, void* const outputBuffer, const unsigned int outputBufferSize);
+	PXSteamPublic unsigned int PXSteamGetProfileItemPropertyUint(PXSteam* const pxSteam, const PXSteamID steamID, const PXSteamCommunityProfileItemType itemType, const PXSteamCommunityProfileItemProperty prop);
 
 
 
